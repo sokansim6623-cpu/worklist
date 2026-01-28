@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>검사 Worklist</title>
+<style>
+body { font-size:22px; text-align:center; font-family:Arial,sans-serif; }
+input, button { font-size:22px; padding:6px 10px; margin:5px; }
+table { margin:20px auto; border-collapse:collapse; font-size:22px; width:95%; max-width:1200px; }
+th, td { padding:10px 14px; text-align:center; }
+th { background:#f0f0f0; }
+.groupRow td { background:#fafafa; font-weight:700; text-align:left; }
+.muted { color:#666; }
+.box { display:inline-block; padding:10px 16px; border:1px solid #ddd; border-radius:10px; }
+.row { margin:6px 0; display:flex; align-items:center; justify-content:space-between; }
+.left { display:flex; align-items:center; flex-wrap:wrap; }
+.right { display:flex; align-items:center;margin-left: 70px;   /* ← 찾기 영역을 왼쪽과 띄우기 */}
+.short { width:140px; }
+.search { width:220px; }
+
+.examWrap { margin-top:10px; }
+.examGrid {
+  display:grid;
+  grid-template-columns: repeat(4,1fr);
+  gap:10px;
+}
+.examGroup { border:1px solid #ddd; border-radius:10px; padding:6px; background:#fff; }
+.examTitle { font-weight:700; background:#f3f3f3; padding:8px; border-radius:6px; cursor:pointer; }
+.examItems { 
+  display:grid; 
+  grid-template-columns:repeat(2,1fr); 
+  gap:6px 10px; 
+  margin-top:8px; 
+  font-size:18px;   /* 🔹 검사항목 글씨 작게 */
+}
+
+label.chk { display:flex; align-items:center; gap:6px; }
+
+@media(max-width:900px){
+.examGrid{grid-template-columns:repeat(2,1fr);}
+.examItems{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+
+<body>
+<h2>환자 등록</h2>
+
+<div class="box">
+
+<div class="row">
+  <div class="left">
+    검사날짜:
+    <input id="examDate" type="date">
+    이름:
+    <input id="name" class="short">
+    차트번호:
+    <input id="chart" class="short">
+    <button id="btnAdd" disabled>등록</button>
+  </div>
+
+  <div class="right">
+    찾기:
+    <input id="q" class="search" placeholder="이름/차트/검사">
+    <button id="btnSearch">검색</button>
+    <button id="btnReset">초기화</button>
+  </div>
+</div>
+
+<div class="examWrap">
+<div class="examGrid">
+
+<div class="examGroup">
+<div class="examTitle toggle">CT</div>
+<div class="examItems">
+<label class="chk"><input class="examChk" type="checkbox" value="C-CT">C-CT</label>
+<label class="chk"><input class="examChk" type="checkbox" value="A-CT">A-CT</label>
+<label class="chk"><input class="examChk" type="checkbox" value="B-CT">B-CT</label>
+<label class="chk"><input class="examChk" type="checkbox" value="CardiacCT">CardiacCT</label>
+<label class="chk"><input class="examChk" type="checkbox" value="CECA">CECA</label>
+<label class="chk"><input class="examChk" type="checkbox" value="LDCT">LDCT</label>
+<label class="chk"><input class="examChk" type="checkbox" value="PDCT">PDCT</label>
+</div>
+</div>
+
+<div class="examGroup">
+<div class="examTitle toggle">MRI</div>
+<div class="examItems">
+<label class="chk"><input class="examChk" type="checkbox" value="B-MRI">B-MRI</label>
+<label class="chk"><input class="examChk" type="checkbox" value="B-MRA">B-MRA</label>
+<label class="chk"><input class="examChk" type="checkbox" value="B-MRI&MRA">B-MRI&MRA</label>
+<label class="chk"><input class="examChk" type="checkbox" value="복부MRI">복부MRI</label>
+<label class="chk"><input class="examChk" type="checkbox" value="관절MRI">관절MRI</label>
+<label class="chk"><input class="examChk" type="checkbox" value="SPINE MRI">SPINE MRI</label>
+</div>
+</div>
+
+<div class="examGroup">
+<div class="examTitle toggle">초음파</div>
+<div class="examItems">
+<label class="chk"><input class="examChk" type="checkbox" value="HU">HU</label>
+<label class="chk"><input class="examChk" type="checkbox" value="IU">IU</label>
+<label class="chk"><input class="examChk" type="checkbox" value="TU">TU</label>
+<label class="chk"><input class="examChk" type="checkbox" value="TTE">TTE</label>
+<label class="chk"><input class="examChk" type="checkbox" value="BU">BU</label>
+</div>
+</div>
+
+<div class="examGroup">
+<div class="examTitle toggle">검진</div>
+<div class="examItems">
+<label class="chk"><input class="examChk" type="checkbox" value="건강검진">건강검진</label>
+<label class="chk"><input class="examChk" type="checkbox" value="내시경">내시경</label>
+<label class="chk"><input class="examChk" type="checkbox" value="심전도">심전도</label>
+<label class="chk"><input class="examChk" type="checkbox" value="기타">기타</label>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+<hr>
+
+<h2>Worklist</h2>
+<table border="1">
+<thead>
+<tr>
+<th>검사날짜</th>
+<th>이름</th>
+<th>차트번호</th>
+<th>검사항목</th>
+<th>상태</th>
+<th>접수</th>
+<th>Start</th>
+<th>Finish</th>
+<th>삭제</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+
+<script type="module" src="./script.js"></script>
+</body>
+</html>
