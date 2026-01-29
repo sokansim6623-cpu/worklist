@@ -2,7 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, addDoc, doc, updateDoc, deleteDoc,
-  query, onSnapshot, serverTimestamp, where, getDocs, limit, orderBy
+  query, onSnapshot, serverTimestamp, where, getDocs, limit, orderBy,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -19,6 +20,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const COL = "worklist";
+const KEEP_DAYS = 90; // 최근 3개월(90일)
+const KEEP_MS = KEEP_DAYS * 24 * 60 * 60 * 1000;
+
 const $ = (id) => document.getElementById(id);
 
 function pad2(n){ return String(n).padStart(2, "0"); }
@@ -42,11 +46,25 @@ function getSelectedExams(){
 let all = [];
 let ready = false;
 
-// 실패/로딩 상태를 행별로 기억 (렌더링돼도 상태 유지)
-const saveState = new Map(); // id -> { state: "idle"|"saving"|"saved"|"failed", msg?: string }
+// 저장 상태/임시 입력값 유지
+const saveState = new Map();     // id -> { state: "idle"|"saving"|"saved"|"failed" }
+const draftResult = new Map();   // id -> string
 
-// 스냅샷으로 덮어쓰기 전에, 사용자가 입력 중인 값을 날리지 않기 위한 임시 캐시
-const draftResult = new Map(); // id -> string
+async function cleanupOldDocs(){
+  const cutoff = Date.now() - KEEP_MS;
+
+  const oldQ = query(
+    collection(db, COL),
+    where("createdAtMs", "<", cutoff)
+  );
+
+  const snap = await getDocs(oldQ);
+  if(snap.empty) return;
+
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+}
 
 async function addItem(){
   if(!ready){
@@ -64,6 +82,7 @@ async function addItem(){
     return;
   }
 
+  // 중복 체크(같은 날짜 + 차트 + 검사)
   for(const exam of exams){
     const dupQ = query(
       collection(db, COL),
@@ -80,6 +99,7 @@ async function addItem(){
     }
   }
 
+  // 여러 검사 한번에 등록
   for(const exam of exams){
     await addDoc(collection(db, COL), {
       name,
@@ -133,7 +153,6 @@ function render(){
       st === "saved"  ? "저장됨" :
       st === "failed" ? "실패(다시)" : "저장";
 
-    // 입력 중이면 draftResult 우선(스냅샷이 와도 사용자가 쓴 글 유지)
     const currentVal = draftResult.has(it.id) ? draftResult.get(it.id) : (it.result || "");
     const safeVal = String(currentVal).replaceAll('"', "&quot;");
 
@@ -184,7 +203,7 @@ function wireEvents(){
   $("btnReset").addEventListener("click", () => { $("q").value = ""; render(); });
   $("examDate").addEventListener("change", render);
 
-  // 입력 중 캐시(draft) 유지
+  // 입력 중 캐시 유지
   $("list").addEventListener("input", (e) => {
     const input = e.target.closest('input[data-role="result"]');
     if(!input) return;
@@ -224,21 +243,17 @@ function wireEvents(){
       const input = document.querySelector(`input[data-role="result"][data-id="${id}"]`);
       const val = (input?.value ?? "").trim();
 
-      // UI 상태 먼저 변경(저장중)
       saveState.set(id, { state: "saving" });
       render();
 
       try{
         await saveResultToDb(id, val);
 
-        // 성공: draft 비우고(saved 표시)
         draftResult.delete(id);
         saveState.set(id, { state: "saved" });
         render();
 
-        // saved 표시 잠깐 후 저장으로 복귀(수정 가능 유지)
         setTimeout(() => {
-          // 그 사이에 사용자가 또 입력했으면 idle로 두기
           if(draftResult.has(id)) return;
           saveState.set(id, { state: "idle" });
           render();
@@ -246,7 +261,6 @@ function wireEvents(){
 
       }catch(err){
         console.error(err);
-        // 실패해도 draft는 유지(글 안 날아감)
         saveState.set(id, { state: "failed" });
         render();
       }
@@ -255,14 +269,13 @@ function wireEvents(){
 
     if(act === "del"){
       await removeItem(id);
-      // 삭제한 id 관련 캐시 정리
       draftResult.delete(id);
       saveState.delete(id);
       return;
     }
   });
 
-  // Enter로 저장도 지원(선택사항이지만 편해서 넣음)
+  // Enter로 저장
   $("list").addEventListener("keydown", (e) => {
     const input = e.target.closest('input[data-role="result"]');
     if(!input) return;
@@ -274,23 +287,26 @@ function wireEvents(){
   });
 }
 
+// 시작
 $("examDate").value = todayStr();
 wireEvents();
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   if(!user) return;
 
   ready = true;
 
+  // 최근 3개월 초과 데이터 삭제(접속 시 1회)
+  try{
+    await cleanupOldDocs();
+  }catch(err){
+    console.error("cleanup failed:", err);
+  }
+
+  // 최신 등록 순으로 로드
   const q = query(collection(db, COL), orderBy("createdAtMs", "desc"));
   onSnapshot(q, (snap) => {
     all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    // draft가 없는 애들만 정리 (작성중인 건 유지)
-    for(const { id } of all){
-      if(!draftResult.has(id)) continue;
-      // 그대로 둠
-    }
     render();
   });
 });
