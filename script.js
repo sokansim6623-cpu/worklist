@@ -47,8 +47,8 @@ let all = [];
 let ready = false;
 
 // 저장 상태/임시 입력값 유지
-const saveState = new Map();     // id -> { state: "idle"|"saving"|"saved"|"failed" }
-const draftResult = new Map();   // id -> string
+const saveState = new Map();   // id -> { state: "idle"|"saving"|"saved"|"failed" }
+const draftResult = new Map(); // id -> string
 
 async function cleanupOldDocs(){
   const cutoff = Date.now() - KEEP_MS;
@@ -197,6 +197,29 @@ async function removeItem(id){
   await deleteDoc(doc(db, COL, id));
 }
 
+/* ✅ 토글 리셋 */
+async function resetVisit(id){
+  await updateDoc(doc(db, COL, id), {
+    status: "대기",
+    visitAt: null,
+    startAt: null,
+    finishAt: null
+  });
+}
+async function resetStart(id){
+  await updateDoc(doc(db, COL, id), {
+    status: "접수",
+    startAt: null,
+    finishAt: null
+  });
+}
+async function resetFinish(id){
+  await updateDoc(doc(db, COL, id), {
+    status: "진행중",
+    finishAt: null
+  });
+}
+
 function wireEvents(){
   $("btnAdd").addEventListener("click", addItem);
   $("btnSearch").addEventListener("click", render);
@@ -224,18 +247,20 @@ function wireEvents(){
     if(!it) return;
 
     if(act === "visit"){
-      if(it.status !== "대기") return;
-      await markVisit(id);
+      if(it.status === "대기"){ await markVisit(id); return; }
+      if(it.status === "접수"){ await resetVisit(id); return; }
       return;
     }
+
     if(act === "start"){
-      if(it.status !== "접수") return;
-      await startExam(id);
+      if(it.status === "접수"){ await startExam(id); return; }
+      if(it.status === "진행중" || it.status === "완료"){ await resetStart(id); return; }
       return;
     }
+
     if(act === "finish"){
-      if(it.status !== "진행중") return;
-      await finishExam(id);
+      if(it.status === "진행중"){ await finishExam(id); return; }
+      if(it.status === "완료"){ await resetFinish(id); return; }
       return;
     }
 

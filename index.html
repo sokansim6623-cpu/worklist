@@ -81,77 +81,76 @@ td input{ box-sizing:border-box; }
 <h2>환자 등록</h2>
 
 <div class="box">
+  <div class="row">
+    <div class="left">
+      검사날짜:
+      <input id="examDate" type="date">
+      이름:
+      <input id="name" class="short">
+      차트번호:
+      <input id="chart" class="short">
+      <button id="btnAdd">등록</button>
+    </div>
 
-<div class="row">
-  <div class="left">
-    검사날짜:
-    <input id="examDate" type="date">
-    이름:
-    <input id="name" class="short">
-    차트번호:
-    <input id="chart" class="short">
-    <button id="btnAdd">등록</button>
+    <div class="right">
+      찾기:
+      <input id="q" class="search" placeholder="이름/차트/검사">
+      <button id="btnSearch">검색</button>
+      <button id="btnReset">초기화</button>
+    </div>
   </div>
 
-  <div class="right">
-    찾기:
-    <input id="q" class="search" placeholder="이름/차트/검사">
-    <button id="btnSearch">검색</button>
-    <button id="btnReset">초기화</button>
+  <div class="examWrap">
+    <div class="examGrid">
+
+      <div class="examGroup">
+        <div class="examTitle toggle">CT</div>
+        <div class="examItems">
+          <label class="chk"><input class="examChk" type="checkbox" value="C-CT">C-CT</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="A-CT">A-CT</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="B-CT">B-CT</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="CardiacCT">CardiacCT</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="CECA">CECA</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="LDCT">LDCT</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="PDCT">PDCT</label>
+        </div>
+      </div>
+
+      <div class="examGroup">
+        <div class="examTitle toggle">MRI</div>
+        <div class="examItems">
+          <label class="chk"><input class="examChk" type="checkbox" value="B-MRI">B-MRI</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="B-MRA">B-MRA</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="B-MRI&MRA">B-MRI&MRA</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="복부MRI">복부MRI</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="관절MRI">관절MRI</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="SPINE MRI">SPINE MRI</label>
+        </div>
+      </div>
+
+      <div class="examGroup">
+        <div class="examTitle toggle">초음파</div>
+        <div class="examItems">
+          <label class="chk"><input class="examChk" type="checkbox" value="HU">HU</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="IU">IU</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="TU">TU</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="TTE">TTE</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="BU">BU</label>
+        </div>
+      </div>
+
+      <div class="examGroup">
+        <div class="examTitle toggle">검진</div>
+        <div class="examItems">
+          <label class="chk"><input class="examChk" type="checkbox" value="건강검진">건강검진</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="내시경">내시경</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="심전도">심전도</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="기타">기타</label>
+        </div>
+      </div>
+
+    </div>
   </div>
-</div>
-
-<div class="examWrap">
-<div class="examGrid">
-
-<div class="examGroup">
-<div class="examTitle toggle">CT</div>
-<div class="examItems">
-<label class="chk"><input class="examChk" type="checkbox" value="C-CT">C-CT</label>
-<label class="chk"><input class="examChk" type="checkbox" value="A-CT">A-CT</label>
-<label class="chk"><input class="examChk" type="checkbox" value="B-CT">B-CT</label>
-<label class="chk"><input class="examChk" type="checkbox" value="CardiacCT">CardiacCT</label>
-<label class="chk"><input class="examChk" type="checkbox" value="CECA">CECA</label>
-<label class="chk"><input class="examChk" type="checkbox" value="LDCT">LDCT</label>
-<label class="chk"><input class="examChk" type="checkbox" value="PDCT">PDCT</label>
-</div>
-</div>
-
-<div class="examGroup">
-<div class="examTitle toggle">MRI</div>
-<div class="examItems">
-<label class="chk"><input class="examChk" type="checkbox" value="B-MRI">B-MRI</label>
-<label class="chk"><input class="examChk" type="checkbox" value="B-MRA">B-MRA</label>
-<label class="chk"><input class="examChk" type="checkbox" value="B-MRI&MRA">B-MRI&MRA</label>
-<label class="chk"><input class="examChk" type="checkbox" value="복부MRI">복부MRI</label>
-<label class="chk"><input class="examChk" type="checkbox" value="관절MRI">관절MRI</label>
-<label class="chk"><input class="examChk" type="checkbox" value="SPINE MRI">SPINE MRI</label>
-</div>
-</div>
-
-<div class="examGroup">
-<div class="examTitle toggle">초음파</div>
-<div class="examItems">
-<label class="chk"><input class="examChk" type="checkbox" value="HU">HU</label>
-<label class="chk"><input class="examChk" type="checkbox" value="IU">IU</label>
-<label class="chk"><input class="examChk" type="checkbox" value="TU">TU</label>
-<label class="chk"><input class="examChk" type="checkbox" value="TTE">TTE</label>
-<label class="chk"><input class="examChk" type="checkbox" value="BU">BU</label>
-</div>
-</div>
-
-<div class="examGroup">
-<div class="examTitle toggle">검진</div>
-<div class="examItems">
-<label class="chk"><input class="examChk" type="checkbox" value="건강검진">건강검진</label>
-<label class="chk"><input class="examChk" type="checkbox" value="내시경">내시경</label>
-<label class="chk"><input class="examChk" type="checkbox" value="심전도">심전도</label>
-<label class="chk"><input class="examChk" type="checkbox" value="기타">기타</label>
-</div>
-</div>
-
-</div>
-</div>
 </div>
 
 <hr>
@@ -159,23 +158,23 @@ td input{ box-sizing:border-box; }
 <h2>Worklist</h2>
 
 <div class="tableWrap">
-<table border="1">
-<thead>
-<tr>
-<th>검사날짜</th>
-<th>이름</th>
-<th>차트번호</th>
-<th>검사항목</th>
-<th>상태</th>
-<th>접수</th>
-<th>Start</th>
-<th>Finish</th>
-<th>검사결과</th>
-<th>삭제</th>
-</tr>
-</thead>
-<tbody id="list"></tbody>
-</table>
+  <table border="1">
+    <thead>
+      <tr>
+        <th>검사날짜</th>
+        <th>이름</th>
+        <th>차트번호</th>
+        <th>검사항목</th>
+        <th>상태</th>
+        <th>접수</th>
+        <th>Start</th>
+        <th>Finish</th>
+        <th>검사결과</th>
+        <th>삭제</th>
+      </tr>
+    </thead>
+    <tbody id="list"></tbody>
+  </table>
 </div>
 
 <script type="module" src="./script.js"></script>
