@@ -40,40 +40,37 @@ label.chk { display:flex; align-items:center; gap:6px; }
 table{
   border-collapse:collapse;
   font-size:22px;
-  width:1700px;
-  min-width:1700px;
+  width:1500px;
+  min-width:1500px;
 }
 td input{ box-sizing:border-box; }
 
-/* 검사결과 입력/저장 박스 */
-.resultBox{
-  display:flex;
-  align-items:center;
-  gap:8px;
+/* ✅ 여기부터: "원상복구 유지" + 원하는 부분만 슬림하게 */
+
+/* 결과/추적 입력칸만 작게(표 컬럼은 자동이라 다른 항목 안 사라짐) */
+#worklistTable input[data-role="result"],
+#worklistTable input[data-role="followUp"]{
+  width:150px;          /* 네모 가로 키움 */
+  height:40px;          /* 네모 세로 키움 */
+  font-size:18px;       /* 글씨도 같이 키움 */
+  padding:6px 10px;     /* 안쪽 여백 */
   border:1px solid #999;
-  border-radius:8px;
-  padding:6px 8px;
-  background:#fff;
-  justify-content:space-between;
-}
-.resultInput{
-  border:0;
-  outline:0;
-  font-size:18px;
-  width:120px;
-  padding:4px 6px;
-}
-.resultBtn{
-  font-size:18px;
-  padding:6px 10px;
+  border-radius:10px;
   margin:0;
-  border:1px solid #bbb;
-  border-radius:6px;
-  background:#f5f5f5;
-  cursor:pointer;
-  white-space:nowrap;
 }
-.resultBtn:active{ transform:translateY(1px); }
+
+
+/* 삭제 컬럼/버튼만 슬림 */
+#worklistTable th:nth-child(11),
+#worklistTable td:nth-child(11){
+  padding-left:6px;
+  padding-right:6px;
+}
+#worklistTable td:nth-child(11) button{
+  padding:4px 8px;
+  font-size:16px;
+  margin:0;
+}
 </style>
 </head>
 
@@ -159,21 +156,15 @@ td input{ box-sizing:border-box; }
   display:grid;
   grid-template-columns: 1fr auto 1fr;
   align-items:center;
-  max-width:1700px;
+  max-width:1500px;
   margin:0 auto 10px;
 ">
-  <!-- 왼쪽 빈 공간 -->
   <div></div>
-
-  <!-- 가운데 제목 -->
   <h2 style="margin:0; text-align:center;">Worklist</h2>
-
-  <!-- 오른쪽 버튼 -->
   <div style="text-align:right;">
     <button id="btnExportXlsx">엑셀로 저장</button>
   </div>
 </div>
-
 
 <div class="tableWrap">
   <table id="worklistTable" border="1">
@@ -188,6 +179,7 @@ td input{ box-sizing:border-box; }
         <th>Start</th>
         <th>Finish</th>
         <th>검사결과</th>
+        <th>추적검사시기</th>
         <th>삭제</th>
       </tr>
     </thead>

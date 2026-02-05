@@ -20,7 +20,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const COL = "worklist";
-const KEEP_DAYS = 90; // 최근 3개월(90일)
+const KEEP_DAYS = 90;
 const KEEP_MS = KEEP_DAYS * 24 * 60 * 60 * 1000;
 
 const $ = (id) => document.getElementById(id);
@@ -43,21 +43,23 @@ function getSelectedExams(){
   return Array.from(document.querySelectorAll(".examChk:checked")).map(x => x.value);
 }
 
+function escAttr(s){
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 let all = [];
 let ready = false;
 
-// 저장 상태/임시 입력값 유지
-const saveState = new Map();   // id -> { state: "idle"|"saving"|"saved"|"failed" }
-const draftResult = new Map(); // id -> string
+const draftResult = new Map();
+const draftFollow = new Map();
 
 async function cleanupOldDocs(){
   const cutoff = Date.now() - KEEP_MS;
-
-  const oldQ = query(
-    collection(db, COL),
-    where("createdAtMs", "<", cutoff)
-  );
-
+  const oldQ = query(collection(db, COL), where("createdAtMs", "<", cutoff));
   const snap = await getDocs(oldQ);
   if(snap.empty) return;
 
@@ -82,7 +84,6 @@ async function addItem(){
     return;
   }
 
-  // 중복 체크(같은 날짜 + 차트 + 검사)
   for(const exam of exams){
     const dupQ = query(
       collection(db, COL),
@@ -99,7 +100,6 @@ async function addItem(){
     }
   }
 
-  // 여러 검사 한번에 등록
   for(const exam of exams){
     await addDoc(collection(db, COL), {
       name,
@@ -111,6 +111,7 @@ async function addItem(){
       startAt: null,
       finishAt: null,
       result: "",
+      followUp: "",
       createdAt: serverTimestamp(),
       createdAtMs: Date.now()
     });
@@ -137,7 +138,7 @@ function render(){
 
   if(filtered.length === 0){
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="10" class="muted">표시할 항목이 없습니다.</td>`;
+    tr.innerHTML = `<td colspan="11" class="muted">표시할 항목이 없습니다.</td>`;
     list.appendChild(tr);
     return;
   }
@@ -147,31 +148,32 @@ function render(){
     const startText  = fmtTime(it.startAt)  || "Start";
     const finishText = fmtTime(it.finishAt) || "Finish";
 
-    const st = saveState.get(it.id)?.state || "idle";
-    const btnText =
-      st === "saving" ? "저장중" :
-      st === "saved"  ? "저장됨" :
-      st === "failed" ? "실패(다시)" : "저장";
+    const resultVal = draftResult.has(it.id) ? draftResult.get(it.id) : (it.result || "");
+    const followVal = draftFollow.has(it.id) ? draftFollow.get(it.id) : (it.followUp || "");
 
-    const currentVal = draftResult.has(it.id) ? draftResult.get(it.id) : (it.result || "");
-    const safeVal = String(currentVal).replaceAll('"', "&quot;");
+    const safeResult = escAttr(resultVal);
+    const safeFollow = escAttr(followVal);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${it.examDate}</td>
-      <td>${it.name}</td>
-      <td>${it.chart}</td>
-      <td>${it.exam}</td>
-      <td style="color:${it.status === "진행중" ? "red" : it.status === "완료" ? "blue" : "black"};">${it.status}</td>
+      <td>${it.examDate || ""}</td>
+      <td>${it.name || ""}</td>
+      <td>${it.chart || ""}</td>
+      <td>${it.exam || ""}</td>
+      <td style="color:${it.status === "진행중" ? "red" : it.status === "완료" ? "blue" : "black"};">${it.status || ""}</td>
+
       <td><button data-act="visit" data-id="${it.id}">${visitText}</button></td>
       <td><button data-act="start" data-id="${it.id}">${startText}</button></td>
       <td><button data-act="finish" data-id="${it.id}">${finishText}</button></td>
 
       <td>
-        <div class="resultBox">
-          <input class="resultInput" data-role="result" data-id="${it.id}" value="${safeVal}" placeholder="결과 입력">
-          <button class="resultBtn" data-act="saveResult" data-id="${it.id}" ${st==="saving" ? "disabled" : ""}>${btnText}</button>
-        </div>
+        <input class="resultInput" data-role="result" data-id="${it.id}"
+          value="${safeResult}" placeholder="결과 입력">
+      </td>
+
+      <td>
+        <input class="resultInput" data-role="followUp" data-id="${it.id}"
+          value="${safeFollow}" placeholder="">
       </td>
 
       <td><button data-act="del" data-id="${it.id}">삭제</button></td>
@@ -189,40 +191,22 @@ async function startExam(id){
 async function finishExam(id){
   await updateDoc(doc(db, COL, id), { status: "완료", finishAt: serverTimestamp() });
 }
-async function saveResultToDb(id, result){
-  await updateDoc(doc(db, COL, id), { result });
-}
 async function removeItem(id){
   if(!confirm("삭제할까요?")) return;
   await deleteDoc(doc(db, COL, id));
 }
 
-/* ✅ 토글 리셋 */
 async function resetVisit(id){
-  await updateDoc(doc(db, COL, id), {
-    status: "대기",
-    visitAt: null,
-    startAt: null,
-    finishAt: null
-  });
+  await updateDoc(doc(db, COL, id), { status: "대기", visitAt: null, startAt: null, finishAt: null });
 }
 async function resetStart(id){
-  await updateDoc(doc(db, COL, id), {
-    status: "접수",
-    startAt: null,
-    finishAt: null
-  });
+  await updateDoc(doc(db, COL, id), { status: "접수", startAt: null, finishAt: null });
 }
 async function resetFinish(id){
-  await updateDoc(doc(db, COL, id), {
-    status: "진행중",
-    finishAt: null
-  });
+  await updateDoc(doc(db, COL, id), { status: "진행중", finishAt: null });
 }
 
-/* ✅ 엑셀 저장: 현재 선택 날짜 + 검색어 필터 그대로 적용 */
 function exportToXlsx(){
-  // xlsx 라이브러리 존재 확인
   if(typeof XLSX === "undefined"){
     alert("엑셀 저장 기능 로딩에 실패했습니다. (xlsx 라이브러리 확인 필요)");
     return;
@@ -247,7 +231,8 @@ function exportToXlsx(){
       "접수": fmtTime(it.visitAt) || "",
       "Start": fmtTime(it.startAt) || "",
       "Finish": fmtTime(it.finishAt) || "",
-      "검사결과": (draftResult.has(it.id) ? draftResult.get(it.id) : (it.result || "")) || ""
+      "검사결과": (draftResult.has(it.id) ? draftResult.get(it.id) : (it.result || "")) || "",
+      "추적검사시기": (draftFollow.has(it.id) ? draftFollow.get(it.id) : (it.followUp || "")) || ""
     }));
 
   if(rows.length === 0){
@@ -258,30 +243,30 @@ function exportToXlsx(){
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Worklist");
-
-  const filename = `worklist_${selectedDate}.xlsx`;
-  XLSX.writeFile(wb, filename);
+  XLSX.writeFile(wb, `worklist_${selectedDate}.xlsx`);
 }
 
 function wireEvents(){
-  $("btnAdd").addEventListener("click", addItem);
-  $("btnSearch").addEventListener("click", render);
-  $("btnReset").addEventListener("click", () => { $("q").value = ""; render(); });
-  $("examDate").addEventListener("change", render);
-
-  // ✅ 엑셀 저장 버튼
+  $("btnAdd")?.addEventListener("click", addItem);
+  $("btnSearch")?.addEventListener("click", render);
+  $("btnReset")?.addEventListener("click", () => { $("q").value = ""; render(); });
+  $("examDate")?.addEventListener("change", render);
   $("btnExportXlsx")?.addEventListener("click", exportToXlsx);
 
-  // 입력 중 캐시 유지
-  $("list").addEventListener("input", (e) => {
-    const input = e.target.closest('input[data-role="result"]');
-    if(!input) return;
-    const id = input.dataset.id;
-    draftResult.set(id, input.value);
-    saveState.set(id, { state: "idle" });
+  $("list")?.addEventListener("input", (e) => {
+    const resultInput = e.target.closest('input[data-role="result"]');
+    if(resultInput){
+      draftResult.set(resultInput.dataset.id, resultInput.value);
+      return;
+    }
+    const followInput = e.target.closest('input[data-role="followUp"]');
+    if(followInput){
+      draftFollow.set(followInput.dataset.id, followInput.value);
+      return;
+    }
   });
 
-  $("list").addEventListener("click", async (e) => {
+  $("list")?.addEventListener("click", async (e) => {
     const btn = e.target.closest("button");
     if(!btn) return;
 
@@ -297,84 +282,72 @@ function wireEvents(){
       if(it.status === "접수"){ await resetVisit(id); return; }
       return;
     }
-
     if(act === "start"){
       if(it.status === "접수"){ await startExam(id); return; }
       if(it.status === "진행중" || it.status === "완료"){ await resetStart(id); return; }
       return;
     }
-
     if(act === "finish"){
       if(it.status === "진행중"){ await finishExam(id); return; }
       if(it.status === "완료"){ await resetFinish(id); return; }
       return;
     }
+    if(act === "del"){
+      await removeItem(id);
+      draftResult.delete(id);
+      draftFollow.delete(id);
+      return;
+    }
+  });
 
-    if(act === "saveResult"){
-      const input = document.querySelector(`input[data-role="result"][data-id="${id}"]`);
-      const val = (input?.value ?? "").trim();
+  $("list")?.addEventListener("keydown", (e) => {
+    const input = e.target.closest('input[data-role="result"], input[data-role="followUp"]');
+    if(!input) return;
+    if(e.key !== "Enter") return;
+    e.preventDefault();
+    input.blur();
+  });
 
-      saveState.set(id, { state: "saving" });
-      render();
-
+  $("list")?.addEventListener("focusout", async (e) => {
+    const resultInput = e.target.closest('input[data-role="result"]');
+    if(resultInput){
+      const id = resultInput.dataset.id;
+      const val = (resultInput.value ?? "").trim();
       try{
-        await saveResultToDb(id, val);
-
+        await updateDoc(doc(db, COL, id), { result: val });
         draftResult.delete(id);
-        saveState.set(id, { state: "saved" });
-        render();
-
-        setTimeout(() => {
-          if(draftResult.has(id)) return;
-          saveState.set(id, { state: "idle" });
-          render();
-        }, 900);
-
       }catch(err){
         console.error(err);
-        saveState.set(id, { state: "failed" });
-        render();
+        alert("검사결과 저장에 실패했습니다.");
       }
       return;
     }
 
-    if(act === "del"){
-      await removeItem(id);
-      draftResult.delete(id);
-      saveState.delete(id);
+    const followInput = e.target.closest('input[data-role="followUp"]');
+    if(followInput){
+      const id = followInput.dataset.id;
+      const val = (followInput.value ?? "").trim();
+      try{
+        await updateDoc(doc(db, COL, id), { followUp: val });
+        draftFollow.delete(id);
+      }catch(err){
+        console.error(err);
+        alert("추적검사시기 저장에 실패했습니다.");
+      }
       return;
     }
   });
-
-  // Enter로 저장
-  $("list").addEventListener("keydown", (e) => {
-    const input = e.target.closest('input[data-role="result"]');
-    if(!input) return;
-    if(e.key !== "Enter") return;
-    e.preventDefault();
-    const id = input.dataset.id;
-    const btn = document.querySelector(`button[data-act="saveResult"][data-id="${id}"]`);
-    if(btn) btn.click();
-  });
 }
 
-// 시작
 $("examDate").value = todayStr();
 wireEvents();
 
 onAuthStateChanged(auth, async (user) => {
   if(!user) return;
-
   ready = true;
 
-  // 최근 3개월 초과 데이터 삭제(접속 시 1회)
-  try{
-    await cleanupOldDocs();
-  }catch(err){
-    console.error("cleanup failed:", err);
-  }
+  try{ await cleanupOldDocs(); }catch(err){ console.error("cleanup failed:", err); }
 
-  // 최신 등록 순으로 로드
   const q = query(collection(db, COL), orderBy("createdAtMs", "desc"));
   onSnapshot(q, (snap) => {
     all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
