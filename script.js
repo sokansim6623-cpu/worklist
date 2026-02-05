@@ -220,11 +220,57 @@ async function resetFinish(id){
   });
 }
 
+/* ✅ 엑셀 저장: 현재 선택 날짜 + 검색어 필터 그대로 적용 */
+function exportToXlsx(){
+  // xlsx 라이브러리 존재 확인
+  if(typeof XLSX === "undefined"){
+    alert("엑셀 저장 기능 로딩에 실패했습니다. (xlsx 라이브러리 확인 필요)");
+    return;
+  }
+
+  const selectedDate = $("examDate")?.value || todayStr();
+  const qText = (($("q")?.value || "").trim()).toLowerCase();
+
+  const rows = all
+    .filter(it => it.examDate === selectedDate)
+    .filter(it => {
+      if(!qText) return true;
+      const hay = `${it.name} ${it.chart} ${it.exam}`.toLowerCase();
+      return hay.includes(qText);
+    })
+    .map(it => ({
+      "검사날짜": it.examDate || "",
+      "이름": it.name || "",
+      "차트번호": it.chart || "",
+      "검사항목": it.exam || "",
+      "상태": it.status || "",
+      "접수": fmtTime(it.visitAt) || "",
+      "Start": fmtTime(it.startAt) || "",
+      "Finish": fmtTime(it.finishAt) || "",
+      "검사결과": (draftResult.has(it.id) ? draftResult.get(it.id) : (it.result || "")) || ""
+    }));
+
+  if(rows.length === 0){
+    alert("엑셀로 저장할 항목이 없습니다.");
+    return;
+  }
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Worklist");
+
+  const filename = `worklist_${selectedDate}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
 function wireEvents(){
   $("btnAdd").addEventListener("click", addItem);
   $("btnSearch").addEventListener("click", render);
   $("btnReset").addEventListener("click", () => { $("q").value = ""; render(); });
   $("examDate").addEventListener("change", render);
+
+  // ✅ 엑셀 저장 버튼
+  $("btnExportXlsx")?.addEventListener("click", exportToXlsx);
 
   // 입력 중 캐시 유지
   $("list").addEventListener("input", (e) => {
