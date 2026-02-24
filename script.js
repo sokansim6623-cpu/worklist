@@ -1,4 +1,3 @@
-// ✅ script.js 최종본 (휴지통 기능 + 엑셀 저장 포함)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -59,10 +58,35 @@ function escAttr(s){
     .replaceAll(">", "&gt;");
 }
 
+/* =========================
+   ✅ 차트/이름 뒤집힘 자동 보정 (화면/엑셀 공용)
+   - 차트번호: 숫자 우선
+   - 이름: 문자 우선
+========================= */
+function normChart(it){
+  const a = String(it.chart || "").trim();
+  const b = String(it.name || "").trim();
+  const isNum = (s) => /^\d+$/.test(s);
+
+  if(isNum(a)) return a;
+  if(isNum(b)) return b;
+  return a || b;
+}
+function normName(it){
+  const a = String(it.chart || "").trim();
+  const b = String(it.name || "").trim();
+  const isNum = (s) => /^\d+$/.test(s);
+
+  if(isNum(a) && !isNum(b)) return b;
+  if(isNum(b) && !isNum(a)) return a;
+  return b || a;
+}
+
 let all = [];
 let ready = false;
-let activeCat = null;     // null | "영상" | "심장초음파" | "초음파"
-let showTrash = false;    // ✅ 휴지통 보기 토글
+let activeCat = null;
+let showTrash = false;
+let activeStatus = ""; // "" | "__BLANK__" | "대기" | "진행중" | "완료"
 
 const draftResult = new Map();
 const draftFollow = new Map();
@@ -84,8 +108,10 @@ async function addItem(){
     return;
   }
 
+  // ✅ 정상: name은 이름 input, chart는 차트번호 input
   const name = ($("name")?.value || "").trim();
   const chart = ($("chart")?.value || "").trim();
+
   const examDate = $("examDate")?.value;
   const exams = getSelectedExams();
   const category = getSelectedCategoryOrNull();
@@ -123,7 +149,7 @@ async function addItem(){
       finishAt: null,
       result: "",
       followUp: "",
-      deleted: false,           // ✅ 휴지통 플래그
+      deleted: false,
       deletedAt: null,
       createdAt: serverTimestamp(),
       createdAtMs: Date.now()
@@ -138,29 +164,40 @@ async function addItem(){
   document.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
 }
 
+/* =========================
+   탭 요약 (총 + 대기 인원)
+========================= */
 function renderSummary(rowsForDateAll){
   const box = $("summaryBox");
   if(!box) return;
 
-  const base = { "영상":0, "심장초음파":0, "초음파":0 };
-  for(const it of rowsForDateAll){
-    if(it.deleted) continue; // ✅ 요약은 기본적으로 정상항목 기준
-    const cat = getItemCategoryOrNull(it);
-    if(!cat) continue;
-    if(base[cat] === undefined) continue;
-    base[cat] += 1;
-  }
+  const normalRows = rowsForDateAll.filter(x => !x.deleted);
 
-  const selectedDate = $("examDate")?.value || todayStr();
-  const total = rowsForDateAll.filter(x => !x.deleted).length;
+  const countFor = (catKey) => {
+    const rows = normalRows.filter(it => {
+      if(!catKey) return true;
+      return getItemCategoryOrNull(it) === catKey;
+    });
+    const total = rows.length;
+    const waiting = rows.filter(it => (it.status || "") === "대기").length;
+    return { total, waiting };
+  };
+
+  const cAll   = countFor(null);
+  const cImg   = countFor("영상");
+  const cEcho  = countFor("심장초음파");
+  const cUS    = countFor("초음파");
+  const cCheck = countFor("검진");
+
   const trashCount = rowsForDateAll.filter(x => !!x.deleted).length;
 
   const tabs = [
-    { key: null,         label:"전체",        count: total },
-    { key: "영상",       label:"영상",        count: base["영상"] },
-    { key: "심장초음파", label:"심장초음파",  count: base["심장초음파"] },
-    { key: "초음파",     label:"초음파",      count: base["초음파"] },
-    { key: "__TRASH__",  label:"휴지통",      count: trashCount }
+    { key: null,         label:"전체",        total: cAll.total,    waiting: cAll.waiting },
+    { key: "영상",       label:"영상",        total: cImg.total,    waiting: cImg.waiting },
+    { key: "심장초음파", label:"심장초음파",  total: cEcho.total,   waiting: cEcho.waiting },
+    { key: "초음파",     label:"초음파",      total: cUS.total,     waiting: cUS.waiting },
+    { key: "검진",       label:"검진",        total: cCheck.total,  waiting: cCheck.waiting },
+    { key: "__TRASH__",  label:"휴지통",      total: trashCount,    waiting: null }
   ];
 
   box.innerHTML = `
@@ -168,10 +205,15 @@ function renderSummary(rowsForDateAll){
       ${tabs.map(t => {
         const isTrash = t.key === "__TRASH__";
         const isActive = isTrash ? showTrash : (!showTrash && activeCat === t.key);
+
+        const subHtml = isTrash
+          ? `<span class="sub">총 ${t.total}명</span>`
+          : `<span class="sub">총 ${t.total}명 · 대기 ${t.waiting}명</span>`;
+
         return `
           <button class="tabBtn ${isActive ? "active" : ""}" data-cat="${t.key ?? ""}">
             ${t.label}
-            <span class="sub">총 ${t.count}명</span>
+            ${subHtml}
           </button>
         `;
       }).join("")}
@@ -214,8 +256,14 @@ function render(){
       return getItemCategoryOrNull(it) === activeCat;
     })
     .filter(it => {
+      if(!activeStatus) return true;
+      if(activeStatus === "__BLANK__") return !(it.status || "");
+      return (it.status || "") === activeStatus;
+    })
+    .filter(it => {
       if(!qText) return true;
-      const hay = `${it.name} ${it.chart} ${it.exam}`.toLowerCase();
+      // ✅ 검색도 보정값 기준으로
+      const hay = `${normName(it)} ${normChart(it)} ${it.exam}`.toLowerCase();
       return hay.includes(qText);
     });
 
@@ -236,8 +284,10 @@ function render(){
 
     const safeResult = escAttr(resultVal);
     const safeFollow = escAttr(followVal);
-    const safeName  = escAttr(it.name || "");
-    const safeChart = escAttr(it.chart || "");
+
+    // ✅ 화면 표시도 보정값
+    const safeName  = escAttr(normName(it));
+    const safeChart = escAttr(normChart(it));
 
     const cat = (it.category || "").trim();
 
@@ -251,10 +301,11 @@ function render(){
       <td>${it.examDate || ""}</td>
 
       <td>
-        <input data-role="name" data-id="${it.id}" value="${safeName}" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
-      </td>
-      <td>
         <input data-role="chart" data-id="${it.id}" value="${safeChart}" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
+      </td>
+
+      <td>
+        <input data-role="name" data-id="${it.id}" value="${safeName}" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
       </td>
 
       <td>${it.exam || ""}</td>
@@ -265,6 +316,7 @@ function render(){
           <option value="영상" ${cat==="영상" ? "selected" : ""}>영상</option>
           <option value="심장초음파" ${cat==="심장초음파" ? "selected" : ""}>심장초음파</option>
           <option value="초음파" ${cat==="초음파" ? "selected" : ""}>초음파</option>
+          <option value="검진" ${cat==="검진" ? "selected" : ""}>검진</option>
         </select>
       </td>
 
@@ -333,8 +385,8 @@ async function purgeForever(id){
 }
 
 /* =========================
-   ✅ 엑셀 저장
-   - 현재 선택 날짜 + 현재 탭/검색 필터 기준 저장
+   ✅ 엑셀 저장 (요청한 5개 컬럼만)
+   - 차트번호, 이름, 검사항목, 검사결과, 추적검사시기
 ========================= */
 function getFilteredRowsForExport(){
   const qText = (($("q")?.value || "").trim()).toLowerCase();
@@ -352,8 +404,13 @@ function getFilteredRowsForExport(){
       return getItemCategoryOrNull(it) === activeCat;
     })
     .filter(it => {
+      if(!activeStatus) return true;
+      if(activeStatus === "__BLANK__") return !(it.status || "");
+      return (it.status || "") === activeStatus;
+    })
+    .filter(it => {
       if(!qText) return true;
-      const hay = `${it.name} ${it.chart} ${it.exam}`.toLowerCase();
+      const hay = `${normName(it)} ${normChart(it)} ${it.exam}`.toLowerCase();
       return hay.includes(qText);
     });
 
@@ -375,33 +432,31 @@ function exportXlsx(){
 
   const selectedDate = $("examDate")?.value || todayStr();
   const tabName = showTrash ? "휴지통" : (activeCat ? activeCat : "전체");
+  const statusName =
+    !activeStatus ? "상태전체" :
+    activeStatus === "__BLANK__" ? "공백" :
+    activeStatus;
 
   const aoa = [
-    ["검사날짜","차트번호","이름","검사항목","분류","상태","접수시간","Start","Finish","검사결과","추적검사시기","삭제여부"]
+    ["검사날짜","차트번호","이름","검사항목","검사결과","추적검사시기"]
   ];
 
   for(const it of rows){
-    aoa.push([
-      it.examDate || "",
-      it.chart || "",
-      it.name || "",
-      it.exam || "",
-      (it.category || ""),
-      (it.status || ""),
-      fmtTime(it.visitAt) || "",
-      fmtTime(it.startAt) || "",
-      fmtTime(it.finishAt) || "",
-      it.result || "",
-      it.followUp || "",
-      it.deleted ? "Y" : ""
-    ]);
+aoa.push([
+  it.examDate || "",
+  normChart(it),
+  normName(it),
+  it.exam || "",
+  it.result || "",
+  it.followUp || ""
+]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Worklist");
 
-  const fileName = `속안심_Worklist_${selectedDate}_${tabName}.xlsx`;
+  const fileName = `속안심_Worklist_${selectedDate}_${tabName}_${statusName}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }
 
@@ -414,10 +469,13 @@ function wireEvents(){
   $("btnReset")?.addEventListener("click", () => { $("q").value = ""; render(); });
   $("examDate")?.addEventListener("change", render);
 
-  // ✅ 엑셀 저장 버튼 연결 (기존 코드에 없어서 저장이 안 됐던 부분)
+  $("statusFilterTh")?.addEventListener("change", () => {
+    activeStatus = $("statusFilterTh").value || "";
+    render();
+  });
+
   $("btnExportXlsx")?.addEventListener("click", exportXlsx);
 
-  // ✅ 분류 변경 저장(빈값이면 필드 삭제)
   $("list")?.addEventListener("change", async (e) => {
     const sel = e.target.closest('select[data-role="category"]');
     if(!sel) return;
@@ -435,7 +493,6 @@ function wireEvents(){
     }
   });
 
-  // draft (결과/추적)
   $("list")?.addEventListener("input", (e) => {
     const resultInput = e.target.closest('input[data-role="result"]');
     if(resultInput){
@@ -449,7 +506,6 @@ function wireEvents(){
     }
   });
 
-  // 클릭 버튼들
   $("list")?.addEventListener("click", async (e) => {
     const btn = e.target.closest("button");
     if(!btn) return;
@@ -480,7 +536,6 @@ function wireEvents(){
 
     if(showTrash) return;
 
-    // ✅ 접수 버튼: 미접수("") -> 대기 / 대기 -> 공란(되돌림)
     if(act === "visit"){
       if(!it.status){ await markWait(id); return; }
       if(it.status === "대기"){ await resetToBlank(id); return; }
@@ -500,7 +555,6 @@ function wireEvents(){
     }
   });
 
-  // Enter -> blur
   $("list")?.addEventListener("keydown", (e) => {
     const input = e.target.closest('input[data-role="result"], input[data-role="followUp"], input[data-role="name"], input[data-role="chart"]');
     if(!input) return;
@@ -509,29 +563,10 @@ function wireEvents(){
     input.blur();
   });
 
-  // ✅ 자동저장: 이름/차트/결과/추적 (휴지통에서는 동작 X)
   $("list")?.addEventListener("focusout", async (e) => {
     if(showTrash) return;
 
-    const nameInput = e.target.closest('input[data-role="name"]');
-    if(nameInput){
-      const id = nameInput.dataset.id;
-      const it = all.find(x => x.id === id);
-      if(!it) return;
-
-      const val = (nameInput.value ?? "").trim();
-      if(!val){
-        alert("이름은 빈값으로 저장할 수 없습니다.");
-        nameInput.value = it.name || "";
-        return;
-      }
-      if(val !== (it.name || "")){
-        try{ await updateDoc(doc(db, COL, id), { name: val }); }
-        catch(err){ console.error(err); alert("이름 저장에 실패했습니다."); }
-      }
-      return;
-    }
-
+    // ✅ 차트번호 저장
     const chartInput = e.target.closest('input[data-role="chart"]');
     if(chartInput){
       const id = chartInput.dataset.id;
@@ -541,12 +576,32 @@ function wireEvents(){
       const val = (chartInput.value ?? "").trim();
       if(!val){
         alert("차트번호는 빈값으로 저장할 수 없습니다.");
-        chartInput.value = it.chart || "";
+        chartInput.value = normChart(it);
         return;
       }
-      if(val !== (it.chart || "")){
+      if(val !== String(it.chart || "").trim()){
         try{ await updateDoc(doc(db, COL, id), { chart: val }); }
         catch(err){ console.error(err); alert("차트번호 저장에 실패했습니다."); }
+      }
+      return;
+    }
+
+    // ✅ 이름 저장
+    const nameInput = e.target.closest('input[data-role="name"]');
+    if(nameInput){
+      const id = nameInput.dataset.id;
+      const it = all.find(x => x.id === id);
+      if(!it) return;
+
+      const val = (nameInput.value ?? "").trim();
+      if(!val){
+        alert("이름은 빈값으로 저장할 수 없습니다.");
+        nameInput.value = normName(it);
+        return;
+      }
+      if(val !== String(it.name || "").trim()){
+        try{ await updateDoc(doc(db, COL, id), { name: val }); }
+        catch(err){ console.error(err); alert("이름 저장에 실패했습니다."); }
       }
       return;
     }
