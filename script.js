@@ -1,4 +1,4 @@
-// ✅ script.js 최종본 (휴지통 기능 추가: 삭제=휴지통 이동 / 휴지통에서 복구, 영구삭제)
+// ✅ script.js 최종본 (휴지통 기능 + 엑셀 저장 포함)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -61,16 +61,14 @@ function escAttr(s){
 
 let all = [];
 let ready = false;
-let activeCat = null; // null | "영상" | "심장초음파" | "초음파"
-let showTrash = false; // ✅ 휴지통 보기 토글
+let activeCat = null;     // null | "영상" | "심장초음파" | "초음파"
+let showTrash = false;    // ✅ 휴지통 보기 토글
 
 const draftResult = new Map();
 const draftFollow = new Map();
 
 async function cleanupOldDocs(){
   const cutoff = Date.now() - KEEP_MS;
-
-  // ✅ 일반 항목 오래된 것 정리 (휴지통 포함/미포함은 정책에 따라 선택)
   const oldQ = query(collection(db, COL), where("createdAtMs", "<", cutoff));
   const snap = await getDocs(oldQ);
   if(snap.empty) return;
@@ -140,26 +138,29 @@ async function addItem(){
   document.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
 }
 
-function renderSummary(rowsForDate){
+function renderSummary(rowsForDateAll){
   const box = $("summaryBox");
   if(!box) return;
 
   const base = { "영상":0, "심장초음파":0, "초음파":0 };
-  for(const it of rowsForDate){
+  for(const it of rowsForDateAll){
+    if(it.deleted) continue; // ✅ 요약은 기본적으로 정상항목 기준
     const cat = getItemCategoryOrNull(it);
     if(!cat) continue;
     if(base[cat] === undefined) continue;
     base[cat] += 1;
   }
 
-  const total = rowsForDate.length;
+  const selectedDate = $("examDate")?.value || todayStr();
+  const total = rowsForDateAll.filter(x => !x.deleted).length;
+  const trashCount = rowsForDateAll.filter(x => !!x.deleted).length;
 
   const tabs = [
     { key: null,         label:"전체",        count: total },
     { key: "영상",       label:"영상",        count: base["영상"] },
     { key: "심장초음파", label:"심장초음파",  count: base["심장초음파"] },
     { key: "초음파",     label:"초음파",      count: base["초음파"] },
-    { key: "__TRASH__",  label:"휴지통",      count: all.filter(x => x.examDate === ($("examDate")?.value || todayStr()) && !!x.deleted).length }
+    { key: "__TRASH__",  label:"휴지통",      count: trashCount }
   ];
 
   box.innerHTML = `
@@ -332,6 +333,79 @@ async function purgeForever(id){
 }
 
 /* =========================
+   ✅ 엑셀 저장
+   - 현재 선택 날짜 + 현재 탭/검색 필터 기준 저장
+========================= */
+function getFilteredRowsForExport(){
+  const qText = (($("q")?.value || "").trim()).toLowerCase();
+  const selectedDate = $("examDate")?.value || todayStr();
+
+  const rowsForDateAll = all.filter(it => it.examDate === selectedDate);
+
+  const rowsForDate = rowsForDateAll
+    .filter(it => showTrash ? !!it.deleted : !it.deleted);
+
+  const filtered = rowsForDate
+    .filter(it => {
+      if(showTrash) return true;
+      if(!activeCat) return true;
+      return getItemCategoryOrNull(it) === activeCat;
+    })
+    .filter(it => {
+      if(!qText) return true;
+      const hay = `${it.name} ${it.chart} ${it.exam}`.toLowerCase();
+      return hay.includes(qText);
+    });
+
+  return filtered;
+}
+
+function exportXlsx(){
+  const XLSX = window.XLSX;
+  if(!XLSX){
+    alert("엑셀 저장 모듈을 불러오지 못했습니다.\n인터넷 연결 또는 로딩 순서를 확인해 주세요.");
+    return;
+  }
+
+  const rows = getFilteredRowsForExport();
+  if(!rows.length){
+    alert("저장할 데이터가 없습니다.");
+    return;
+  }
+
+  const selectedDate = $("examDate")?.value || todayStr();
+  const tabName = showTrash ? "휴지통" : (activeCat ? activeCat : "전체");
+
+  const aoa = [
+    ["검사날짜","차트번호","이름","검사항목","분류","상태","접수시간","Start","Finish","검사결과","추적검사시기","삭제여부"]
+  ];
+
+  for(const it of rows){
+    aoa.push([
+      it.examDate || "",
+      it.chart || "",
+      it.name || "",
+      it.exam || "",
+      (it.category || ""),
+      (it.status || ""),
+      fmtTime(it.visitAt) || "",
+      fmtTime(it.startAt) || "",
+      fmtTime(it.finishAt) || "",
+      it.result || "",
+      it.followUp || "",
+      it.deleted ? "Y" : ""
+    ]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Worklist");
+
+  const fileName = `속안심_Worklist_${selectedDate}_${tabName}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+
+/* =========================
    이벤트
 ========================= */
 function wireEvents(){
@@ -339,6 +413,9 @@ function wireEvents(){
   $("btnSearch")?.addEventListener("click", render);
   $("btnReset")?.addEventListener("click", () => { $("q").value = ""; render(); });
   $("examDate")?.addEventListener("change", render);
+
+  // ✅ 엑셀 저장 버튼 연결 (기존 코드에 없어서 저장이 안 됐던 부분)
+  $("btnExportXlsx")?.addEventListener("click", exportXlsx);
 
   // ✅ 분류 변경 저장(빈값이면 필드 삭제)
   $("list")?.addEventListener("change", async (e) => {
@@ -403,6 +480,7 @@ function wireEvents(){
 
     if(showTrash) return;
 
+    // ✅ 접수 버튼: 미접수("") -> 대기 / 대기 -> 공란(되돌림)
     if(act === "visit"){
       if(!it.status){ await markWait(id); return; }
       if(it.status === "대기"){ await resetToBlank(id); return; }
@@ -503,6 +581,7 @@ function wireEvents(){
   });
 }
 
+// 초기 세팅
 $("examDate").value = todayStr();
 wireEvents();
 
