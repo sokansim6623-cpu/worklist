@@ -84,8 +84,8 @@ margin-top:4px;
 
 /* 컬럼 폭 고정 */
 #worklistTable th:nth-child(1), #worklistTable td:nth-child(1){ width:120px; } /* 검사날짜 */
-#worklistTable th:nth-child(2), #worklistTable td:nth-child(2){ width:100px; } /* 이름 */
-#worklistTable th:nth-child(3), #worklistTable td:nth-child(3){ width:100px; } /* 차트번호 */
+#worklistTable th:nth-child(2), #worklistTable td:nth-child(2){ width:100px; } /* 차트번호 */
+#worklistTable th:nth-child(3), #worklistTable td:nth-child(3){ width:100px; } /* 이름 */
 #worklistTable th:nth-child(4), #worklistTable td:nth-child(4){ width:130px; overflow:hidden; text-overflow:ellipsis; } /* 검사항목(조금 줄임) */
 #worklistTable th:nth-child(5), #worklistTable td:nth-child(5){ width:95px; padding-left:6px; padding-right:6px; } /* 분류 */
 #worklistTable th:nth-child(6), #worklistTable td:nth-child(6){ width:80px; }  /* 상태 */
@@ -247,9 +247,9 @@ margin-top:4px;
     <div class="left">
       검사날짜:
       <input id="examDate" type="date">
-      이름:
-      <input id="name" class="short">
       차트번호:
+      <input id="name" class="short">
+      이름:
       <input id="chart" class="short">
       <button id="btnAdd">등록</button>
     </div>
@@ -337,8 +337,8 @@ margin-top:4px;
     <thead>
       <tr>
         <th>검사날짜</th>
-        <th>이름</th>
         <th>차트번호</th>
+        <th>이름</th>
         <th>검사항목</th>
         <th>분류</th>
         <th>상태</th>
