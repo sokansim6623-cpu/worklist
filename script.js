@@ -1,3 +1,11 @@
+// ✅ script.js 최종본
+// - 차트/이름 입력 정상화(신규 저장 정상)
+// - 과거 뒤집힌 데이터도 화면/검색/엑셀에서 자동 보정
+// - 상태 헤더 필터
+// - 탭: 총/대기 인원 표시
+// - 검사항목(exam) 표에서 드롭다운 수정 가능
+// - 엑셀: 검사날짜 + (차트번호, 이름, 검사항목, 검사결과, 추적검사시기)
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -59,9 +67,7 @@ function escAttr(s){
 }
 
 /* =========================
-   ✅ 차트/이름 뒤집힘 자동 보정 (화면/엑셀 공용)
-   - 차트번호: 숫자 우선
-   - 이름: 문자 우선
+   ✅ 차트/이름 뒤집힘 자동 보정 (화면/검색/엑셀 공용)
 ========================= */
 function normChart(it){
   const a = String(it.chart || "").trim();
@@ -82,11 +88,33 @@ function normName(it){
   return b || a;
 }
 
+/* =========================
+   ✅ 검사항목 드롭다운 옵션
+========================= */
+const EXAM_OPTIONS = [
+  // CT
+  "C-CT","A-CT","B-CT","Cardiac CT","CECA CT","dynamic CT","기타 CT",
+  // MRI
+  "B-MRI","B-MRA","B-MRI&MRA","복부MRI","관절MRI","SPINE MRI",
+  // 초음파
+  "HU","IU","TU","TTE","BU",
+  // 검진
+  "건강검진","위내시경","대장내시경","기타"
+];
+
+function examOptionsHtml(selected){
+  const cur = String(selected || "").trim();
+  return EXAM_OPTIONS.map(v => {
+    const sel = (v === cur) ? "selected" : "";
+    return `<option value="${escAttr(v)}" ${sel}>${v}</option>`;
+  }).join("");
+}
+
 let all = [];
 let ready = false;
-let activeCat = null;
-let showTrash = false;
-let activeStatus = ""; // "" | "__BLANK__" | "대기" | "진행중" | "완료"
+let activeCat = null;      // null | "영상" | "심장초음파" | "초음파" | "검진"
+let showTrash = false;     // 휴지통 보기 토글
+let activeStatus = "";     // "" | "__BLANK__" | "대기" | "진행중" | "완료"
 
 const draftResult = new Map();
 const draftFollow = new Map();
@@ -108,7 +136,7 @@ async function addItem(){
     return;
   }
 
-  // ✅ 정상: name은 이름 input, chart는 차트번호 input
+  // ✅ 정상: 차트번호 input(id=chart), 이름 input(id=name)
   const name = ($("name")?.value || "").trim();
   const chart = ($("chart")?.value || "").trim();
 
@@ -262,7 +290,6 @@ function render(){
     })
     .filter(it => {
       if(!qText) return true;
-      // ✅ 검색도 보정값 기준으로
       const hay = `${normName(it)} ${normChart(it)} ${it.exam}`.toLowerCase();
       return hay.includes(qText);
     });
@@ -285,7 +312,6 @@ function render(){
     const safeResult = escAttr(resultVal);
     const safeFollow = escAttr(followVal);
 
-    // ✅ 화면 표시도 보정값
     const safeName  = escAttr(normName(it));
     const safeChart = escAttr(normChart(it));
 
@@ -308,7 +334,17 @@ function render(){
         <input data-role="name" data-id="${it.id}" value="${safeName}" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
       </td>
 
-      <td>${it.exam || ""}</td>
+      <td>
+        ${
+          showTrash
+            ? (it.exam || "")
+            : `
+              <select data-role="exam" data-id="${it.id}" style="width:100%; height:32px; font-size:14px; border:1px solid #999; border-radius:8px; padding:4px 8px; box-sizing:border-box;">
+                ${examOptionsHtml(it.exam)}
+              </select>
+            `
+        }
+      </td>
 
       <td>
         <select data-role="category" data-id="${it.id}" ${showTrash ? "disabled" : ""}>
@@ -385,8 +421,8 @@ async function purgeForever(id){
 }
 
 /* =========================
-   ✅ 엑셀 저장 (요청한 5개 컬럼만)
-   - 차트번호, 이름, 검사항목, 검사결과, 추적검사시기
+   엑셀 저장
+   - 검사날짜 + 차트번호 + 이름 + 검사항목 + 검사결과 + 추적검사시기
 ========================= */
 function getFilteredRowsForExport(){
   const qText = (($("q")?.value || "").trim()).toLowerCase();
@@ -442,14 +478,14 @@ function exportXlsx(){
   ];
 
   for(const it of rows){
-aoa.push([
-  it.examDate || "",
-  normChart(it),
-  normName(it),
-  it.exam || "",
-  it.result || "",
-  it.followUp || ""
-]);
+    aoa.push([
+      it.examDate || "",
+      normChart(it),
+      normName(it),
+      it.exam || "",
+      it.result || "",
+      it.followUp || ""
+    ]);
   }
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -469,13 +505,16 @@ function wireEvents(){
   $("btnReset")?.addEventListener("click", () => { $("q").value = ""; render(); });
   $("examDate")?.addEventListener("change", render);
 
+  // ✅ 상태 헤더 필터
   $("statusFilterTh")?.addEventListener("change", () => {
     activeStatus = $("statusFilterTh").value || "";
     render();
   });
 
+  // ✅ 엑셀 저장
   $("btnExportXlsx")?.addEventListener("click", exportXlsx);
 
+  // ✅ 분류 변경 저장(빈값이면 필드 삭제)
   $("list")?.addEventListener("change", async (e) => {
     const sel = e.target.closest('select[data-role="category"]');
     if(!sel) return;
@@ -493,6 +532,24 @@ function wireEvents(){
     }
   });
 
+  // ✅ 검사항목 변경 저장
+  $("list")?.addEventListener("change", async (e) => {
+    const sel = e.target.closest('select[data-role="exam"]');
+    if(!sel) return;
+    if(showTrash) return;
+
+    const id = sel.dataset.id;
+    const val = (sel.value || "").trim();
+
+    try{
+      await updateDoc(doc(db, COL, id), { exam: val });
+    }catch(err){
+      console.error(err);
+      alert("검사항목 저장에 실패했습니다.");
+    }
+  });
+
+  // draft (결과/추적)
   $("list")?.addEventListener("input", (e) => {
     const resultInput = e.target.closest('input[data-role="result"]');
     if(resultInput){
@@ -506,6 +563,7 @@ function wireEvents(){
     }
   });
 
+  // 클릭 버튼들
   $("list")?.addEventListener("click", async (e) => {
     const btn = e.target.closest("button");
     if(!btn) return;
@@ -536,6 +594,7 @@ function wireEvents(){
 
     if(showTrash) return;
 
+    // 접수: "" -> 대기 / 대기 -> ""
     if(act === "visit"){
       if(!it.status){ await markWait(id); return; }
       if(it.status === "대기"){ await resetToBlank(id); return; }
@@ -555,6 +614,7 @@ function wireEvents(){
     }
   });
 
+  // Enter -> blur
   $("list")?.addEventListener("keydown", (e) => {
     const input = e.target.closest('input[data-role="result"], input[data-role="followUp"], input[data-role="name"], input[data-role="chart"]');
     if(!input) return;
@@ -563,10 +623,10 @@ function wireEvents(){
     input.blur();
   });
 
+  // ✅ 자동저장: 차트/이름/결과/추적
   $("list")?.addEventListener("focusout", async (e) => {
     if(showTrash) return;
 
-    // ✅ 차트번호 저장
     const chartInput = e.target.closest('input[data-role="chart"]');
     if(chartInput){
       const id = chartInput.dataset.id;
@@ -586,7 +646,6 @@ function wireEvents(){
       return;
     }
 
-    // ✅ 이름 저장
     const nameInput = e.target.closest('input[data-role="name"]');
     if(nameInput){
       const id = nameInput.dataset.id;
