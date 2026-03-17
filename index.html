@@ -17,6 +17,7 @@ th { background:#f0f0f0; }
 .left { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
 .right { display:flex; align-items:center; margin-left:40px; gap:8px; }
 .short { width:140px; }
+.phone { width:160px; }
 .search { width:240px; }
 
 .examWrap { margin-top:10px; }
@@ -43,8 +44,8 @@ table{
   border-collapse:collapse;
   table-layout:fixed;
   font-size:18px;
-  width:1580px;
-  min-width:1580px;
+  width:1460px;
+  min-width:1460px;
 }
 
 #summaryBox{ flex:1; }
@@ -55,34 +56,23 @@ table{
   word-break:keep-all;
 }
 
-#worklistTable th:nth-child(1), #worklistTable td:nth-child(1){ width:120px; }
-#worklistTable th:nth-child(2), #worklistTable td:nth-child(2){ width:100px; }
-#worklistTable th:nth-child(3), #worklistTable td:nth-child(3){ width:100px; }
-#worklistTable th:nth-child(4), #worklistTable td:nth-child(4){ width:130px; overflow:hidden; text-overflow:ellipsis; }
-#worklistTable th:nth-child(5), #worklistTable td:nth-child(5){ width:95px; padding-left:6px; padding-right:6px; }
-#worklistTable th:nth-child(6), #worklistTable td:nth-child(6){ width:80px; }
-#worklistTable th:nth-child(7), #worklistTable td:nth-child(7){ width:90px; }
-#worklistTable th:nth-child(8), #worklistTable td:nth-child(8){ width:90px; }
-#worklistTable th:nth-child(9), #worklistTable td:nth-child(9){ width:90px; }
-#worklistTable th:nth-child(10),#worklistTable td:nth-child(10){ width:190px; }
-#worklistTable th:nth-child(11),#worklistTable td:nth-child(11){ width:100px; }
-#worklistTable th:nth-child(12),#worklistTable td:nth-child(12){ width:120px; padding-left:6px; padding-right:6px; }
-
-#worklistTable select[data-role="category"]{
-  width:82px;
-  height:32px;
-  font-size:14px;
-  padding:4px 8px;
-  border:1px solid #999;
-  border-radius:8px;
-  margin:0;
-  box-sizing:border-box;
-}
+#worklistTable th:nth-child(1), #worklistTable td:nth-child(1){ width:110px; } /* 차트번호 */
+#worklistTable th:nth-child(2), #worklistTable td:nth-child(2){ width:110px; } /* 이름 */
+#worklistTable th:nth-child(3), #worklistTable td:nth-child(3){ width:150px; } /* 핸드폰번호 */
+#worklistTable th:nth-child(4), #worklistTable td:nth-child(4){ width:170px; } /* 검사항목 */
+#worklistTable th:nth-child(5), #worklistTable td:nth-child(5){ width:90px; }  /* 상태 */
+#worklistTable th:nth-child(6), #worklistTable td:nth-child(6){ width:90px; }  /* 접수 */
+#worklistTable th:nth-child(7), #worklistTable td:nth-child(7){ width:90px; }  /* Start */
+#worklistTable th:nth-child(8), #worklistTable td:nth-child(8){ width:90px; }  /* Finish */
+#worklistTable th:nth-child(9), #worklistTable td:nth-child(9){ width:220px; } /* 검사결과 */
+#worklistTable th:nth-child(10),#worklistTable td:nth-child(10){ width:140px; } /* 추적검사시기 */
+#worklistTable th:nth-child(11),#worklistTable td:nth-child(11){ width:90px; } /* 관리 */
 
 #worklistTable input[data-role="result"],
 #worklistTable input[data-role="followUp"],
 #worklistTable input[data-role="name"],
-#worklistTable input[data-role="chart"]{
+#worklistTable input[data-role="chart"],
+#worklistTable input[data-role="phone"]{
   width:100%;
   height:32px;
   font-size:17px;
@@ -99,14 +89,10 @@ table{
   margin:0;
 }
 
-#worklistTable th:nth-child(12),
-#worklistTable td:nth-child(12){
-  white-space:nowrap;
-}
-#worklistTable td:nth-child(12) button{
+#worklistTable td:nth-child(11) button{
   font-size:14px;
-  padding:5px 8px;
-  margin:0 2px;
+  padding:4px 6px;
+  margin:0 1px;
 }
 
 .categoryBox{
@@ -121,7 +107,7 @@ table{
 .categoryBox label{ display:flex; align-items:center; gap:8px; font-size:16px; }
 
 .summaryWrap{
-  max-width:1580px;
+  max-width:1500px;
   margin:12px auto 0;
   padding:0 10px;
 }
@@ -166,7 +152,7 @@ table{
 }
 
 .listHeader{
-  width:1580px;
+  width:1460px;
   margin:12px auto 0;
   display:flex;
   justify-content:space-between;
@@ -175,7 +161,6 @@ table{
 .summaryWrap{ flex:1; margin:0; padding:0; }
 .excelWrap{ margin-left:20px; }
 
-/* ✅ 상태 헤더 필터 */
 #statusFilterTh{
   width:100%;
   height:32px;
@@ -198,9 +183,9 @@ table{
       검사날짜:
       <input id="examDate" type="date">
 
-      <!-- ✅ 정상: 차트번호=chart / 이름=name -->
       차트번호:
       <input id="chart" class="short">
+
       이름:
       <input id="name" class="short">
 
@@ -260,8 +245,6 @@ table{
           <label class="chk"><input class="examChk" type="checkbox" value="TTE">TTE</label>
           <label class="chk"><input class="examChk" type="checkbox" value="BU">BU</label>
           <label class="chk"><input class="examChk" type="checkbox" value="기타">기타</label>
-
-          
         </div>
       </div>
 
@@ -292,12 +275,10 @@ table{
   <table id="worklistTable" border="1">
     <thead>
       <tr>
-        <th>검사날짜</th>
         <th>차트번호</th>
         <th>이름</th>
+        <th>핸드폰번호</th>
         <th>검사항목</th>
-        <th>분류</th>
-
         <th>
           <select id="statusFilterTh" title="상태 필터">
             <option value="">상태(전체)</option>
@@ -307,7 +288,6 @@ table{
             <option value="완료">완료</option>
           </select>
         </th>
-
         <th>접수</th>
         <th>Start</th>
         <th>Finish</th>

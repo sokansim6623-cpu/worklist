@@ -1,11 +1,3 @@
-// ✅ script.js 최종본
-// - 차트/이름 입력 정상화(신규 저장 정상)
-// - 과거 뒤집힌 데이터도 화면/검색/엑셀에서 자동 보정
-// - 상태 헤더 필터
-// - 탭: 총/대기 인원 표시
-// - 검사항목(exam) 표에서 드롭다운 수정 가능
-// - 엑셀: 검사날짜 + (차트번호, 이름, 검사항목, 검사결과, 추적검사시기)
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -66,9 +58,7 @@ function escAttr(s){
     .replaceAll(">", "&gt;");
 }
 
-/* =========================
-   ✅ 차트/이름 뒤집힘 자동 보정 (화면/검색/엑셀 공용)
-========================= */
+/* 차트/이름 뒤집힘 자동 보정 */
 function normChart(it){
   const a = String(it.chart || "").trim();
   const b = String(it.name || "").trim();
@@ -87,18 +77,15 @@ function normName(it){
   if(isNum(b) && !isNum(a)) return a;
   return b || a;
 }
+function normPhone(it){
+  return String(it.phone || "").trim();
+}
 
-/* =========================
-   ✅ 검사항목 드롭다운 옵션
-========================= */
+/* 검사항목 드롭다운 옵션 */
 const EXAM_OPTIONS = [
-  // CT
   "C-CT","A-CT","B-CT","Cardiac CT","CECA CT","dynamic CT","기타 CT",
-  // MRI
   "B-MRI","B-MRA","B-MRI&MRA","복부MRI","관절MRI","SPINE MRI",
-  // 초음파
   "HU","IU","TU","TTE","BU",
-  // 검진
   "건강검진","위내시경","대장내시경","기타"
 ];
 
@@ -112,9 +99,9 @@ function examOptionsHtml(selected){
 
 let all = [];
 let ready = false;
-let activeCat = null;      // null | "영상" | "심장초음파" | "초음파" | "검진"
-let showTrash = false;     // 휴지통 보기 토글
-let activeStatus = "";     // "" | "__BLANK__" | "대기" | "진행중" | "완료"
+let activeCat = null;
+let showTrash = false;
+let activeStatus = "";
 
 const draftResult = new Map();
 const draftFollow = new Map();
@@ -136,10 +123,8 @@ async function addItem(){
     return;
   }
 
-  // ✅ 정상: 차트번호 input(id=chart), 이름 input(id=name)
   const name = ($("name")?.value || "").trim();
   const chart = ($("chart")?.value || "").trim();
-
   const examDate = $("examDate")?.value;
   const exams = getSelectedExams();
   const category = getSelectedCategoryOrNull();
@@ -169,6 +154,7 @@ async function addItem(){
     const payload = {
       name,
       chart,
+      phone: "",
       exam,
       examDate,
       status: "",
@@ -192,9 +178,6 @@ async function addItem(){
   document.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
 }
 
-/* =========================
-   탭 요약 (총 + 대기 인원)
-========================= */
 function renderSummary(rowsForDateAll){
   const box = $("summaryBox");
   if(!box) return;
@@ -274,8 +257,7 @@ function render(){
   const rowsForDateAll = all.filter(it => it.examDate === selectedDate);
   renderSummary(rowsForDateAll);
 
-  const rowsForDate = rowsForDateAll
-    .filter(it => showTrash ? !!it.deleted : !it.deleted);
+  const rowsForDate = rowsForDateAll.filter(it => showTrash ? !!it.deleted : !it.deleted);
 
   const filtered = rowsForDate
     .filter(it => {
@@ -296,7 +278,7 @@ function render(){
 
   if(filtered.length === 0){
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="12" class="muted">표시할 항목이 없습니다.</td>`;
+    tr.innerHTML = `<td colspan="11" class="muted">표시할 항목이 없습니다.</td>`;
     list.appendChild(tr);
     return;
   }
@@ -311,11 +293,9 @@ function render(){
 
     const safeResult = escAttr(resultVal);
     const safeFollow = escAttr(followVal);
-
     const safeName  = escAttr(normName(it));
     const safeChart = escAttr(normChart(it));
-
-    const cat = (it.category || "").trim();
+    const safePhone = escAttr(normPhone(it));
 
     const statusColor =
       it.status === "진행중" ? "red" :
@@ -324,14 +304,16 @@ function render(){
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${it.examDate || ""}</td>
-
       <td>
         <input data-role="chart" data-id="${it.id}" value="${safeChart}" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
       </td>
 
       <td>
         <input data-role="name" data-id="${it.id}" value="${safeName}" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
+      </td>
+
+      <td>
+        <input data-role="phone" data-id="${it.id}" value="${safePhone}" placeholder="핸드폰번호" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
       </td>
 
       <td>
@@ -344,16 +326,6 @@ function render(){
               </select>
             `
         }
-      </td>
-
-      <td>
-        <select data-role="category" data-id="${it.id}" ${showTrash ? "disabled" : ""}>
-          <option value="" ${cat==="" ? "selected" : ""}>선택</option>
-          <option value="영상" ${cat==="영상" ? "selected" : ""}>영상</option>
-          <option value="심장초음파" ${cat==="심장초음파" ? "selected" : ""}>심장초음파</option>
-          <option value="초음파" ${cat==="초음파" ? "selected" : ""}>초음파</option>
-          <option value="검진" ${cat==="검진" ? "selected" : ""}>검진</option>
-        </select>
       </td>
 
       <td style="color:${statusColor};">${it.status || ""}</td>
@@ -385,9 +357,7 @@ function render(){
   }
 }
 
-/* =========================
-   상태 흐름
-========================= */
+/* 상태 흐름 */
 async function markWait(id){
   await updateDoc(doc(db, COL, id), { status: "대기", visitAt: serverTimestamp() });
 }
@@ -407,9 +377,7 @@ async function resetFinish(id){
   await updateDoc(doc(db, COL, id), { status: "진행중", finishAt: null });
 }
 
-/* =========================
-   휴지통 동작
-========================= */
+/* 휴지통 동작 */
 async function moveToTrash(id){
   await updateDoc(doc(db, COL, id), { deleted: true, deletedAt: serverTimestamp() });
 }
@@ -420,18 +388,13 @@ async function purgeForever(id){
   await deleteDoc(doc(db, COL, id));
 }
 
-/* =========================
-   엑셀 저장
-   - 검사날짜 + 차트번호 + 이름 + 검사항목 + 검사결과 + 추적검사시기
-========================= */
+/* 엑셀 저장 */
 function getFilteredRowsForExport(){
   const qText = (($("q")?.value || "").trim()).toLowerCase();
   const selectedDate = $("examDate")?.value || todayStr();
 
   const rowsForDateAll = all.filter(it => it.examDate === selectedDate);
-
-  const rowsForDate = rowsForDateAll
-    .filter(it => showTrash ? !!it.deleted : !it.deleted);
+  const rowsForDate = rowsForDateAll.filter(it => showTrash ? !!it.deleted : !it.deleted);
 
   const filtered = rowsForDate
     .filter(it => {
@@ -474,7 +437,7 @@ function exportXlsx(){
     activeStatus;
 
   const aoa = [
-    ["검사날짜","차트번호","이름","검사항목","검사결과","추적검사시기"]
+    ["검사날짜","차트번호","이름","핸드폰번호","검사항목","검사결과","추적검사시기"]
   ];
 
   for(const it of rows){
@@ -482,6 +445,7 @@ function exportXlsx(){
       it.examDate || "",
       normChart(it),
       normName(it),
+      it.phone || "",
       it.exam || "",
       it.result || "",
       it.followUp || ""
@@ -496,25 +460,19 @@ function exportXlsx(){
   XLSX.writeFile(wb, fileName);
 }
 
-/* =========================
-   이벤트
-========================= */
 function wireEvents(){
   $("btnAdd")?.addEventListener("click", addItem);
   $("btnSearch")?.addEventListener("click", render);
   $("btnReset")?.addEventListener("click", () => { $("q").value = ""; render(); });
   $("examDate")?.addEventListener("change", render);
 
-  // ✅ 상태 헤더 필터
   $("statusFilterTh")?.addEventListener("change", () => {
     activeStatus = $("statusFilterTh").value || "";
     render();
   });
 
-  // ✅ 엑셀 저장
   $("btnExportXlsx")?.addEventListener("click", exportXlsx);
 
-  // ✅ 분류 변경 저장(빈값이면 필드 삭제)
   $("list")?.addEventListener("change", async (e) => {
     const sel = e.target.closest('select[data-role="category"]');
     if(!sel) return;
@@ -532,7 +490,6 @@ function wireEvents(){
     }
   });
 
-  // ✅ 검사항목 변경 저장
   $("list")?.addEventListener("change", async (e) => {
     const sel = e.target.closest('select[data-role="exam"]');
     if(!sel) return;
@@ -549,7 +506,6 @@ function wireEvents(){
     }
   });
 
-  // draft (결과/추적)
   $("list")?.addEventListener("input", (e) => {
     const resultInput = e.target.closest('input[data-role="result"]');
     if(resultInput){
@@ -563,7 +519,6 @@ function wireEvents(){
     }
   });
 
-  // 클릭 버튼들
   $("list")?.addEventListener("click", async (e) => {
     const btn = e.target.closest("button");
     if(!btn) return;
@@ -594,7 +549,6 @@ function wireEvents(){
 
     if(showTrash) return;
 
-    // 접수: "" -> 대기 / 대기 -> ""
     if(act === "visit"){
       if(!it.status){ await markWait(id); return; }
       if(it.status === "대기"){ await resetToBlank(id); return; }
@@ -614,16 +568,14 @@ function wireEvents(){
     }
   });
 
-  // Enter -> blur
   $("list")?.addEventListener("keydown", (e) => {
-    const input = e.target.closest('input[data-role="result"], input[data-role="followUp"], input[data-role="name"], input[data-role="chart"]');
+    const input = e.target.closest('input[data-role="result"], input[data-role="followUp"], input[data-role="name"], input[data-role="chart"], input[data-role="phone"]');
     if(!input) return;
     if(e.key !== "Enter") return;
     e.preventDefault();
     input.blur();
   });
 
-  // ✅ 자동저장: 차트/이름/결과/추적
   $("list")?.addEventListener("focusout", async (e) => {
     if(showTrash) return;
 
@@ -665,6 +617,20 @@ function wireEvents(){
       return;
     }
 
+    const phoneInput = e.target.closest('input[data-role="phone"]');
+    if(phoneInput){
+      const id = phoneInput.dataset.id;
+      const it = all.find(x => x.id === id);
+      if(!it) return;
+
+      const val = (phoneInput.value ?? "").trim();
+      if(val !== String(it.phone || "").trim()){
+        try{ await updateDoc(doc(db, COL, id), { phone: val }); }
+        catch(err){ console.error(err); alert("핸드폰번호 저장에 실패했습니다."); }
+      }
+      return;
+    }
+
     const resultInput = e.target.closest('input[data-role="result"]');
     if(resultInput){
       const id = resultInput.dataset.id;
@@ -695,7 +661,6 @@ function wireEvents(){
   });
 }
 
-// 초기 세팅
 $("examDate").value = todayStr();
 wireEvents();
 
