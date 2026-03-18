@@ -85,7 +85,7 @@ function normPhone(it){
 const EXAM_OPTIONS = [
   "C-CT","A-CT","B-CT","Cardiac CT","CECA CT","dynamic CT","기타 CT",
   "B-MRI","B-MRA","B-MRI&MRA","복부MRI","관절MRI","SPINE MRI",
-  "HU","IU","TU","TTE","BU",
+  "HU","IU(초음파)","IU(심초음파)","TU","TTE","BU",
   "건강검진","위내시경","대장내시경","기타"
 ];
 
