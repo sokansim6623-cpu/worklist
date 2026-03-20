@@ -6,31 +6,103 @@
 <title>검사 Worklist</title>
 
 <style>
-body { font-size:19px; text-align:center; font-family:Arial,sans-serif; }
-input, button, select { font-size:18px; padding:5px 8px; margin:2px; }
+body {
+  font-size:19px;
+  text-align:center;
+  font-family:Arial,sans-serif;
+}
 
-th, td { padding:7px 8px; text-align:center; line-height:1.25; }
+input, button, select {
+  font-size:18px;
+  padding:5px 8px;
+  margin:2px;
+}
+
+th, td {
+  padding:7px 8px;
+  text-align:center;
+  line-height:1.25;
+}
+
 th { background:#f0f0f0; }
 .muted { color:#666; }
-.box { display:inline-block; padding:12px 14px; border:1px solid #ddd; border-radius:10px; }
-.row { margin:8px 0; display:flex; align-items:center; justify-content:space-between; }
-.left { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
-.right { display:flex; align-items:center; margin-left:40px; gap:8px; }
+
+.box {
+  display:inline-block;
+  padding:12px 14px;
+  border:1px solid #ddd;
+  border-radius:10px;
+}
+
+.row {
+  margin:8px 0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.left {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.right {
+  display:flex;
+  align-items:center;
+  margin-left:40px;
+  gap:8px;
+}
+
 .short { width:140px; }
-.phone { width:160px; }
 .search { width:240px; }
 
+/* ================= 검사 선택 영역 ================= */
+
 .examWrap { margin-top:10px; }
-.examGrid { display:grid; grid-template-columns: repeat(4,1fr); gap:10px; }
-.examGroup { border:1px solid #ddd; border-radius:10px; padding:8px; background:#fff; }
-.examTitle { font-weight:700; background:#f3f3f3; padding:10px; border-radius:6px; cursor:pointer; }
-.examItems { display:grid; grid-template-columns:repeat(2,1fr); gap:8px 12px; margin-top:10px; font-size:15px; }
-label.chk { display:flex; align-items:center; gap:8px; }
+
+.examGrid {
+  display:grid;
+  grid-template-columns: repeat(4,1fr);
+  gap:10px;
+}
+
+.examGroup {
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:8px;
+  background:#fff;
+}
+
+.examTitle {
+  font-weight:700;
+  background:#f3f3f3;
+  padding:10px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.examItems {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px 12px;
+  margin-top:10px;
+  font-size:15px;
+}
+
+label.chk {
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
 
 @media(max-width:900px){
   .examGrid{grid-template-columns:repeat(2,1fr);}
   .examItems{grid-template-columns:repeat(2,1fr);}
 }
+
+/* ================= 테이블 ================= */
 
 .tableWrap{
   width:100%;
@@ -44,8 +116,8 @@ table{
   border-collapse:collapse;
   table-layout:fixed;
   font-size:18px;
-  width:1460px;
-  min-width:1460px;
+  width:1560px;
+  min-width:1560px;
 }
 
 #summaryBox{ flex:1; }
@@ -54,19 +126,19 @@ table{
 #worklistTable td{
   white-space:nowrap;
   word-break:keep-all;
+  vertical-align:middle;
 }
 
-#worklistTable th:nth-child(1), #worklistTable td:nth-child(1){ width:110px; } /* 차트번호 */
-#worklistTable th:nth-child(2), #worklistTable td:nth-child(2){ width:110px; } /* 이름 */
-#worklistTable th:nth-child(3), #worklistTable td:nth-child(3){ width:150px; } /* 핸드폰번호 */
-#worklistTable th:nth-child(4), #worklistTable td:nth-child(4){ width:170px; } /* 검사항목 */
-#worklistTable th:nth-child(5), #worklistTable td:nth-child(5){ width:90px; }  /* 상태 */
-#worklistTable th:nth-child(6), #worklistTable td:nth-child(6){ width:90px; }  /* 접수 */
-#worklistTable th:nth-child(7), #worklistTable td:nth-child(7){ width:90px; }  /* Start */
-#worklistTable th:nth-child(8), #worklistTable td:nth-child(8){ width:90px; }  /* Finish */
-#worklistTable th:nth-child(9), #worklistTable td:nth-child(9){ width:220px; } /* 검사결과 */
-#worklistTable th:nth-child(10),#worklistTable td:nth-child(10){ width:140px; } /* 추적검사시기 */
-#worklistTable th:nth-child(11),#worklistTable td:nth-child(11){ width:90px; } /* 관리 */
+/* 컬럼 너비 */
+#worklistTable th:nth-child(1), #worklistTable td:nth-child(1){ width:120px; } /* 분류 */
+#worklistTable th:nth-child(2), #worklistTable td:nth-child(2){ width:110px; } /* 차트번호 */
+#worklistTable th:nth-child(3), #worklistTable td:nth-child(3){ width:110px; } /* 이름 */
+#worklistTable th:nth-child(4), #worklistTable td:nth-child(4){ width:140px; } /* 검사항목 */
+#worklistTable th:nth-child(5), #worklistTable td:nth-child(5){ width:140px; } /* 상태 */
+#worklistTable th:nth-child(6), #worklistTable td:nth-child(6){ width:200px; } /* 검사결과 */
+#worklistTable th:nth-child(7), #worklistTable td:nth-child(7){ width:140px; } /* 추적검사시기 */
+#worklistTable th:nth-child(8), #worklistTable td:nth-child(9){ width:150px; } /* 핸드폰번호 */
+#worklistTable th:nth-child(9), #worklistTable td:nth-child(8){ width:95px; }  /* 관리 */
 
 #worklistTable input[data-role="result"],
 #worklistTable input[data-role="followUp"],
@@ -89,10 +161,25 @@ table{
   margin:0;
 }
 
-#worklistTable td:nth-child(11) button{
-  font-size:14px;
-  padding:4px 6px;
-  margin:0 1px;
+#worklistTable td:nth-child(8){
+  text-align:center;
+  white-space:nowrap;
+}
+
+.manageBtns{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:4px;
+}
+
+#worklistTable td:nth-child(8) button{
+  font-size:12px;
+  padding:4px 5px;
+  margin:0;
+  display:inline-block;
+  vertical-align:middle;
+  min-width:38px;
 }
 
 .categoryBox{
@@ -107,7 +194,7 @@ table{
 .categoryBox label{ display:flex; align-items:center; gap:8px; font-size:16px; }
 
 .summaryWrap{
-  max-width:1500px;
+  max-width:1510px;
   margin:12px auto 0;
   padding:0 10px;
 }
@@ -152,7 +239,7 @@ table{
 }
 
 .listHeader{
-  width:1460px;
+  width:1510px;
   margin:12px auto 0;
   display:flex;
   justify-content:space-between;
@@ -170,6 +257,83 @@ table{
   border-radius:8px;
   box-sizing:border-box;
   background:#fff;
+}
+
+#worklistTable input[data-role="chart"],
+#worklistTable input[data-role="name"]{
+  font-weight:600;
+}
+
+#worklistTable select[data-role="category"],
+#worklistTable select[data-role="exam"]{
+  width:100%;
+  height:32px;
+  font-size:14px;
+  border:1px solid #999;
+  border-radius:8px;
+  padding:4px 8px;
+  box-sizing:border-box;
+  background:#fff;
+  font-weight:600;
+}
+
+.stateCell{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  width:100%;
+  min-height:40px;
+}
+
+.stateChip{
+  min-width:92px;
+  height:32px;
+  padding:0 10px;
+  border:1px solid #cfcfcf;
+  border-radius:999px;
+  background:#fff;
+  font-size:14px;
+  font-weight:700;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  cursor:pointer;
+  box-sizing:border-box;
+  transition:all .15s ease;
+}
+
+.stateChip:hover{
+  background:#f7f7f7;
+}
+
+.stateChip:disabled{
+  opacity:1;
+}
+
+.stateChip.empty{
+  color:#555;
+  border-color:#d6d6d6;
+  background:#fafafa;
+}
+
+.stateChip.waiting{
+  color:#8a6d00;
+  border-color:#e6d28a;
+  background:#fff9e8;
+}
+
+.stateChip.running{
+  color:#b42318;
+  border-color:#f0b3ad;
+  background:#fff1f0;
+}
+
+.stateChip.done{
+  color:#175cd3;
+  border-color:#a9c4ff;
+  background:#eef4ff;
+  cursor:default;
 }
 </style>
 </head>
@@ -210,9 +374,8 @@ table{
 
   <div class="examWrap">
     <div class="examGrid">
-
       <div class="examGroup">
-        <div class="examTitle toggle">CT</div>
+        <div class="examTitle">CT</div>
         <div class="examItems">
           <label class="chk"><input class="examChk" type="checkbox" value="C-CT">C-CT</label>
           <label class="chk"><input class="examChk" type="checkbox" value="A-CT">A-CT</label>
@@ -225,7 +388,7 @@ table{
       </div>
 
       <div class="examGroup">
-        <div class="examTitle toggle">MRI</div>
+        <div class="examTitle">MRI</div>
         <div class="examItems">
           <label class="chk"><input class="examChk" type="checkbox" value="B-MRI">B-MRI</label>
           <label class="chk"><input class="examChk" type="checkbox" value="B-MRA">B-MRA</label>
@@ -237,7 +400,7 @@ table{
       </div>
 
       <div class="examGroup">
-        <div class="examTitle toggle">초음파</div>
+        <div class="examTitle">초음파</div>
         <div class="examItems">
           <label class="chk"><input class="examChk" type="checkbox" value="HU">HU</label>
           <label class="chk"><input class="examChk" type="checkbox" value="TU">TU</label>
@@ -245,20 +408,21 @@ table{
           <label class="chk"><input class="examChk" type="checkbox" value="IU(심초음파)">IU(심초음파)</label>
           <label class="chk"><input class="examChk" type="checkbox" value="TTE">TTE</label>
           <label class="chk"><input class="examChk" type="checkbox" value="BU">BU</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="기타">기타</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="기타(초음파)">기타</label>
         </div>
       </div>
 
       <div class="examGroup">
-        <div class="examTitle toggle">검진</div>
+        <div class="examTitle">검진</div>
         <div class="examItems">
           <label class="chk"><input class="examChk" type="checkbox" value="건강검진">건강검진</label>
           <label class="chk"><input class="examChk" type="checkbox" value="위내시경">위내시경</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="위내시경(자부담)">위내시경(자부담)</label>
           <label class="chk"><input class="examChk" type="checkbox" value="대장내시경">대장내시경</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="기타">기타</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="대장내시경(자부담)">대장내시경(자부담)</label>
+          <label class="chk"><input class="examChk" type="checkbox" value="기타(검진)">기타</label>
         </div>
       </div>
-
     </div>
   </div>
 </div>
@@ -276,24 +440,21 @@ table{
   <table id="worklistTable" border="1">
     <thead>
       <tr>
+        <th>분류</th>
         <th>차트번호</th>
         <th>이름</th>
-        <th>핸드폰번호</th>
         <th>검사항목</th>
         <th>
           <select id="statusFilterTh" title="상태 필터">
             <option value="">상태(전체)</option>
-            <option value="__BLANK__">공백</option>
             <option value="대기">대기</option>
             <option value="진행중">진행중</option>
             <option value="완료">완료</option>
           </select>
         </th>
-        <th>접수</th>
-        <th>Start</th>
-        <th>Finish</th>
         <th>검사결과</th>
         <th>추적검사시기</th>
+        <th>핸드폰번호</th>
         <th>관리</th>
       </tr>
     </thead>

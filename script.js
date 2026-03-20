@@ -3,7 +3,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gsta
 import {
   getFirestore, collection, addDoc, doc, updateDoc, deleteDoc,
   query, onSnapshot, serverTimestamp, where, getDocs, limit, orderBy,
-  writeBatch, deleteField
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -26,10 +26,12 @@ const KEEP_MS = KEEP_DAYS * 24 * 60 * 60 * 1000;
 const $ = (id) => document.getElementById(id);
 
 function pad2(n){ return String(n).padStart(2, "0"); }
+
 function todayStr(){
   const d = new Date();
   return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
+
 function fmtTime(ts){
   if(!ts) return "";
   try{
@@ -39,17 +41,21 @@ function fmtTime(ts){
     return "";
   }
 }
+
 function getSelectedExams(){
   return Array.from(document.querySelectorAll(".examChk:checked")).map(x => x.value);
 }
+
 function getSelectedCategoryOrNull(){
   const el = document.querySelector('input[name="category"]:checked');
   return el ? el.value : null;
 }
+
 function getItemCategoryOrNull(it){
   const c = String(it.category || "").trim();
   return c ? c : null;
 }
+
 function escAttr(s){
   return String(s ?? "")
     .replaceAll("&", "&amp;")
@@ -58,7 +64,6 @@ function escAttr(s){
     .replaceAll(">", "&gt;");
 }
 
-/* 차트/이름 뒤집힘 자동 보정 */
 function normChart(it){
   const a = String(it.chart || "").trim();
   const b = String(it.name || "").trim();
@@ -68,6 +73,7 @@ function normChart(it){
   if(isNum(b)) return b;
   return a || b;
 }
+
 function normName(it){
   const a = String(it.chart || "").trim();
   const b = String(it.name || "").trim();
@@ -77,16 +83,16 @@ function normName(it){
   if(isNum(b) && !isNum(a)) return a;
   return b || a;
 }
+
 function normPhone(it){
   return String(it.phone || "").trim();
 }
 
-/* 검사항목 드롭다운 옵션 */
 const EXAM_OPTIONS = [
   "C-CT","A-CT","B-CT","Cardiac CT","CECA CT","dynamic CT","기타 CT",
   "B-MRI","B-MRA","B-MRI&MRA","복부MRI","관절MRI","SPINE MRI",
-  "HU","IU(초음파)","IU(심초음파)","TU","TTE","BU",
-  "건강검진","위내시경","대장내시경","기타"
+  "HU","IU(초음파)","IU(심초음파)","TU","TTE","BU","기타(초음파)",
+  "건강검진","위내시경","대장내시경","위내시경(자부담)","대장내시경(자부담)","기타(검진)"
 ];
 
 function examOptionsHtml(selected){
@@ -95,6 +101,115 @@ function examOptionsHtml(selected){
     const sel = (v === cur) ? "selected" : "";
     return `<option value="${escAttr(v)}" ${sel}>${v}</option>`;
   }).join("");
+}
+
+const CATEGORY_OPTIONS = ["", "영상", "심장초음파", "초음파", "검진"];
+
+function categoryOptionsHtml(selected){
+  const cur = String(selected || "").trim();
+  return CATEGORY_OPTIONS.map(v => {
+    const sel = (v === cur) ? "selected" : "";
+    const label = v || "선택";
+    return `<option value="${escAttr(v)}" ${sel}>${label}</option>`;
+  }).join("");
+}
+
+function inferCategoryFromExam(exam){
+  const e = String(exam || "").trim();
+
+  const imageSet = [
+    "C-CT","A-CT","B-CT","Cardiac CT","CECA CT","dynamic CT","기타 CT",
+    "B-MRI","B-MRA","B-MRI&MRA","복부MRI","관절MRI","SPINE MRI"
+  ];
+  const echoSet = ["TTE"];
+  const usSet = ["HU","TU","IU(초음파)","IU(심초음파)","BU","기타(초음파)"];
+  const checkSet = ["건강검진","위내시경","대장내시경","기타(검진)"];
+
+  if(imageSet.includes(e)) return "영상";
+  if(echoSet.includes(e)) return "심장초음파";
+  if(usSet.includes(e)) return "초음파";
+  if(checkSet.includes(e)) return "검진";
+
+  return null;
+}
+
+function getStateUi(it){
+  const s = String(it.status || "");
+  const visitTime = fmtTime(it.visitAt);
+  const startTime = fmtTime(it.startAt);
+  const finishTime = fmtTime(it.finishAt);
+
+  if(!s){
+    return {
+      nextAct: "next",
+      label: "접수",
+      className: "empty"
+    };
+  }
+
+  if(s === "대기"){
+    return {
+      nextAct: "next",
+      label: `${visitTime} 대기`,
+      className: "waiting"
+    };
+  }
+
+  if(s === "진행중"){
+    return {
+      nextAct: "next",
+      label: `${startTime} 진행중`,
+      className: "running"
+    };
+  }
+
+  if(s === "완료"){
+    return {
+      nextAct: "",
+      label: `${finishTime} 완료`,
+      className: "done"
+    };
+  }
+
+  return {
+    nextAct: "next",
+    label: "접수",
+    className: "empty"
+  };
+}
+
+/* 등록 시: 차트번호 + 이름이 같은 이전 기록의 전화번호 가져오기 */
+async function findSavedPhone(chart, name){
+  const chartNo = String(chart || "").trim();
+  const patientName = String(name || "").trim();
+
+  if(!chartNo || !patientName) return "";
+
+  try{
+    const q = query(
+      collection(db, COL),
+      where("chart", "==", chartNo),
+      where("name", "==", patientName),
+      limit(20)
+    );
+
+    const snap = await getDocs(q);
+    if(snap.empty) return "";
+
+    const docs = snap.docs
+      .map(d => d.data())
+      .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+
+    for(const data of docs){
+      const phone = String(data.phone || "").trim();
+      if(phone) return phone;
+    }
+
+    return "";
+  }catch(err){
+    console.error("전화번호 조회 실패:", err);
+    return "";
+  }
 }
 
 let all = [];
@@ -127,7 +242,7 @@ async function addItem(){
   const chart = ($("chart")?.value || "").trim();
   const examDate = $("examDate")?.value;
   const exams = getSelectedExams();
-  const category = getSelectedCategoryOrNull();
+  const selectedCategory = getSelectedCategoryOrNull();
 
   if(!name || !chart || !examDate || exams.length === 0){
     alert("검사날짜/이름/차트번호/검사항목을 확인해 주세요.");
@@ -150,11 +265,15 @@ async function addItem(){
     }
   }
 
+  const savedPhone = await findSavedPhone(chart, name);
+
   for(const exam of exams){
+    const autoCategory = selectedCategory || inferCategoryFromExam(exam);
+
     const payload = {
       name,
       chart,
-      phone: "",
+      phone: savedPhone || "",
       exam,
       examDate,
       status: "",
@@ -168,7 +287,8 @@ async function addItem(){
       createdAt: serverTimestamp(),
       createdAtMs: Date.now()
     };
-    if(category) payload.category = category;
+
+    if(autoCategory) payload.category = autoCategory;
     await addDoc(collection(db, COL), payload);
   }
 
@@ -267,7 +387,6 @@ function render(){
     })
     .filter(it => {
       if(!activeStatus) return true;
-      if(activeStatus === "__BLANK__") return !(it.status || "");
       return (it.status || "") === activeStatus;
     })
     .filter(it => {
@@ -278,16 +397,12 @@ function render(){
 
   if(filtered.length === 0){
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="11" class="muted">표시할 항목이 없습니다.</td>`;
+    tr.innerHTML = `<td colspan="9" class="muted">표시할 항목이 없습니다.</td>`;
     list.appendChild(tr);
     return;
   }
 
   for(const it of filtered){
-    const visitText  = fmtTime(it.visitAt)  || "접수";
-    const startText  = fmtTime(it.startAt)  || "Start";
-    const finishText = fmtTime(it.finishAt) || "Finish";
-
     const resultVal = draftResult.has(it.id) ? draftResult.get(it.id) : (it.result || "");
     const followVal = draftFollow.has(it.id) ? draftFollow.get(it.id) : (it.followUp || "");
 
@@ -296,24 +411,29 @@ function render(){
     const safeName  = escAttr(normName(it));
     const safeChart = escAttr(normChart(it));
     const safePhone = escAttr(normPhone(it));
-
-    const statusColor =
-      it.status === "진행중" ? "red" :
-      it.status === "완료" ? "blue" :
-      "black";
+    const safeCategory = escAttr(getItemCategoryOrNull(it) || "");
+    const stateUi = getStateUi(it);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>
-        <input data-role="chart" data-id="${it.id}" value="${safeChart}" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
+        ${
+          showTrash
+            ? (safeCategory || "")
+            : `
+              <select data-role="category" data-id="${it.id}">
+                ${categoryOptionsHtml(getItemCategoryOrNull(it) || "")}
+              </select>
+            `
+        }
       </td>
 
       <td>
-        <input data-role="name" data-id="${it.id}" value="${safeName}" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
+        <input data-role="chart" data-id="${it.id}" value="${safeChart}" ${showTrash ? "disabled" : ""}>
       </td>
 
       <td>
-        <input data-role="phone" data-id="${it.id}" value="${safePhone}" placeholder="핸드폰번호" style="width:100%; box-sizing:border-box;" ${showTrash ? "disabled" : ""}>
+        <input data-role="name" data-id="${it.id}" value="${safeName}" ${showTrash ? "disabled" : ""}>
       </td>
 
       <td>
@@ -321,74 +441,75 @@ function render(){
           showTrash
             ? (it.exam || "")
             : `
-              <select data-role="exam" data-id="${it.id}" style="width:100%; height:32px; font-size:14px; border:1px solid #999; border-radius:8px; padding:4px 8px; box-sizing:border-box;">
+              <select data-role="exam" data-id="${it.id}">
                 ${examOptionsHtml(it.exam)}
               </select>
             `
         }
       </td>
 
-      <td style="color:${statusColor};">${it.status || ""}</td>
-
-      <td><button data-act="visit" data-id="${it.id}" ${showTrash ? "disabled" : ""}>${visitText}</button></td>
-      <td><button data-act="start" data-id="${it.id}" ${showTrash ? "disabled" : ""}>${startText}</button></td>
-      <td><button data-act="finish" data-id="${it.id}" ${showTrash ? "disabled" : ""}>${finishText}</button></td>
+      <td>
+        ${
+          showTrash
+            ? `<span style="font-weight:600;">${stateUi.label}</span>`
+            : `
+              <div class="stateCell">
+                <button
+                  class="stateChip ${stateUi.className}"
+                  data-act="${stateUi.nextAct}"
+                  data-id="${it.id}"
+                  ${it.status === "완료" ? "disabled" : ""}
+                >
+                  ${stateUi.label}
+                </button>
+              </div>
+            `
+        }
+      </td>
 
       <td>
         <input data-role="result" data-id="${it.id}" value="${safeResult}" placeholder="결과 입력" ${showTrash ? "disabled" : ""}>
       </td>
 
       <td>
-        <input data-role="followUp" data-id="${it.id}" value="${safeFollow}" placeholder="" ${showTrash ? "disabled" : ""}>
-      </td>
+  <input data-role="followUp" data-id="${it.id}" value="${safeFollow}" ${showTrash ? "disabled" : ""}>
+</td>
 
-      <td>
-        ${
-          showTrash
-            ? `
-              <button data-act="restore" data-id="${it.id}">복구</button>
-              <button data-act="purge" data-id="${it.id}">영구삭제</button>
-            `
-            : `<button data-act="trash" data-id="${it.id}">삭제</button>`
-        }
-      </td>
+<td>
+  <input data-role="phone" data-id="${it.id}" value="${safePhone}" placeholder="핸드폰번호" ${showTrash ? "disabled" : ""}>
+</td>
+
+<td>
+  ${
+    showTrash
+      ? `
+        <button data-act="restore" data-id="${it.id}">복구</button>
+        <button data-act="purge" data-id="${it.id}">삭제</button>
+      `
+      : `
+        <div class="manageBtns">
+          <button data-act="trash" data-id="${it.id}">삭제</button>
+        </div>
+      `
+  }
+</td>
     `;
     list.appendChild(tr);
   }
 }
 
-/* 상태 흐름 */
-async function markWait(id){
-  await updateDoc(doc(db, COL, id), { status: "대기", visitAt: serverTimestamp() });
-}
-async function resetToBlank(id){
-  await updateDoc(doc(db, COL, id), { status: "", visitAt: null, startAt: null, finishAt: null });
-}
-async function startExam(id){
-  await updateDoc(doc(db, COL, id), { status: "진행중", startAt: serverTimestamp() });
-}
-async function finishExam(id){
-  await updateDoc(doc(db, COL, id), { status: "완료", finishAt: serverTimestamp() });
-}
-async function resetStart(id){
-  await updateDoc(doc(db, COL, id), { status: "대기", startAt: null, finishAt: null });
-}
-async function resetFinish(id){
-  await updateDoc(doc(db, COL, id), { status: "진행중", finishAt: null });
-}
-
-/* 휴지통 동작 */
 async function moveToTrash(id){
   await updateDoc(doc(db, COL, id), { deleted: true, deletedAt: serverTimestamp() });
 }
+
 async function restoreFromTrash(id){
   await updateDoc(doc(db, COL, id), { deleted: false, deletedAt: null });
 }
+
 async function purgeForever(id){
   await deleteDoc(doc(db, COL, id));
 }
 
-/* 엑셀 저장 */
 function getFilteredRowsForExport(){
   const qText = (($("q")?.value || "").trim()).toLowerCase();
   const selectedDate = $("examDate")?.value || todayStr();
@@ -396,7 +517,7 @@ function getFilteredRowsForExport(){
   const rowsForDateAll = all.filter(it => it.examDate === selectedDate);
   const rowsForDate = rowsForDateAll.filter(it => showTrash ? !!it.deleted : !it.deleted);
 
-  const filtered = rowsForDate
+  return rowsForDate
     .filter(it => {
       if(showTrash) return true;
       if(!activeCat) return true;
@@ -404,7 +525,6 @@ function getFilteredRowsForExport(){
     })
     .filter(it => {
       if(!activeStatus) return true;
-      if(activeStatus === "__BLANK__") return !(it.status || "");
       return (it.status || "") === activeStatus;
     })
     .filter(it => {
@@ -412,8 +532,6 @@ function getFilteredRowsForExport(){
       const hay = `${normName(it)} ${normChart(it)} ${it.exam}`.toLowerCase();
       return hay.includes(qText);
     });
-
-  return filtered;
 }
 
 function exportXlsx(){
@@ -431,21 +549,17 @@ function exportXlsx(){
 
   const selectedDate = $("examDate")?.value || todayStr();
   const tabName = showTrash ? "휴지통" : (activeCat ? activeCat : "전체");
-  const statusName =
-    !activeStatus ? "상태전체" :
-    activeStatus === "__BLANK__" ? "공백" :
-    activeStatus;
+  const statusName = !activeStatus ? "상태전체" : activeStatus;
 
   const aoa = [
-    ["검사날짜","차트번호","이름","핸드폰번호","검사항목","검사결과","추적검사시기"]
+    ["핸드폰번호","이름","검사날짜","검사항목","결과","추적검사시기"]
   ];
 
   for(const it of rows){
     aoa.push([
-      it.examDate || "",
-      normChart(it),
-      normName(it),
       it.phone || "",
+      normName(it),
+      it.examDate || "",
       it.exam || "",
       it.result || "",
       it.followUp || ""
@@ -463,7 +577,10 @@ function exportXlsx(){
 function wireEvents(){
   $("btnAdd")?.addEventListener("click", addItem);
   $("btnSearch")?.addEventListener("click", render);
-  $("btnReset")?.addEventListener("click", () => { $("q").value = ""; render(); });
+  $("btnReset")?.addEventListener("click", () => {
+    $("q").value = "";
+    render();
+  });
   $("examDate")?.addEventListener("change", render);
 
   $("statusFilterTh")?.addEventListener("change", () => {
@@ -474,35 +591,39 @@ function wireEvents(){
   $("btnExportXlsx")?.addEventListener("click", exportXlsx);
 
   $("list")?.addEventListener("change", async (e) => {
-    const sel = e.target.closest('select[data-role="category"]');
-    if(!sel) return;
-    if(showTrash) return;
+    const catSel = e.target.closest('select[data-role="category"]');
+    if(catSel){
+      if(showTrash) return;
 
-    const id = sel.dataset.id;
-    const val = (sel.value || "").trim();
+      const id = catSel.dataset.id;
+      const val = (catSel.value || "").trim();
 
-    try{
-      if(!val) await updateDoc(doc(db, COL, id), { category: deleteField() });
-      else await updateDoc(doc(db, COL, id), { category: val });
-    }catch(err){
-      console.error(err);
-      alert("분류 저장에 실패했습니다.");
+      try{
+        await updateDoc(doc(db, COL, id), { category: val || null });
+      }catch(err){
+        console.error(err);
+        alert("분류 저장에 실패했습니다.");
+      }
+      return;
     }
-  });
 
-  $("list")?.addEventListener("change", async (e) => {
-    const sel = e.target.closest('select[data-role="exam"]');
-    if(!sel) return;
-    if(showTrash) return;
+    const examSel = e.target.closest('select[data-role="exam"]');
+    if(examSel){
+      if(showTrash) return;
 
-    const id = sel.dataset.id;
-    const val = (sel.value || "").trim();
+      const id = examSel.dataset.id;
+      const val = (examSel.value || "").trim();
+      const autoCategory = inferCategoryFromExam(val);
 
-    try{
-      await updateDoc(doc(db, COL, id), { exam: val });
-    }catch(err){
-      console.error(err);
-      alert("검사항목 저장에 실패했습니다.");
+      try{
+        const payload = { exam: val };
+        if(autoCategory) payload.category = autoCategory;
+        await updateDoc(doc(db, COL, id), payload);
+      }catch(err){
+        console.error(err);
+        alert("검사항목 저장에 실패했습니다.");
+      }
+      return;
     }
   });
 
@@ -512,6 +633,7 @@ function wireEvents(){
       draftResult.set(resultInput.dataset.id, resultInput.value);
       return;
     }
+
     const followInput = e.target.closest('input[data-role="followUp"]');
     if(followInput){
       draftFollow.set(followInput.dataset.id, followInput.value);
@@ -549,22 +671,30 @@ function wireEvents(){
 
     if(showTrash) return;
 
-    if(act === "visit"){
-      if(!it.status){ await markWait(id); return; }
-      if(it.status === "대기"){ await resetToBlank(id); return; }
-      return;
-    }
+    if(act === "next"){
+      if(!it.status){
+        await updateDoc(doc(db, COL, id), {
+          status: "대기",
+          visitAt: serverTimestamp()
+        });
+        return;
+      }
 
-    if(act === "start"){
-      if(it.status === "대기"){ await startExam(id); return; }
-      if(it.status === "진행중" || it.status === "완료"){ await resetStart(id); return; }
-      return;
-    }
+      if(it.status === "대기"){
+        await updateDoc(doc(db, COL, id), {
+          status: "진행중",
+          startAt: serverTimestamp()
+        });
+        return;
+      }
 
-    if(act === "finish"){
-      if(it.status === "진행중"){ await finishExam(id); return; }
-      if(it.status === "완료"){ await resetFinish(id); return; }
-      return;
+      if(it.status === "진행중"){
+        await updateDoc(doc(db, COL, id), {
+          status: "완료",
+          finishAt: serverTimestamp()
+        });
+        return;
+      }
     }
   });
 
@@ -592,8 +722,12 @@ function wireEvents(){
         return;
       }
       if(val !== String(it.chart || "").trim()){
-        try{ await updateDoc(doc(db, COL, id), { chart: val }); }
-        catch(err){ console.error(err); alert("차트번호 저장에 실패했습니다."); }
+        try{
+          await updateDoc(doc(db, COL, id), { chart: val });
+        }catch(err){
+          console.error(err);
+          alert("차트번호 저장에 실패했습니다.");
+        }
       }
       return;
     }
@@ -611,12 +745,17 @@ function wireEvents(){
         return;
       }
       if(val !== String(it.name || "").trim()){
-        try{ await updateDoc(doc(db, COL, id), { name: val }); }
-        catch(err){ console.error(err); alert("이름 저장에 실패했습니다."); }
+        try{
+          await updateDoc(doc(db, COL, id), { name: val });
+        }catch(err){
+          console.error(err);
+          alert("이름 저장에 실패했습니다.");
+        }
       }
       return;
     }
 
+    /* 기존 기능 유지: 한 줄에 전화번호 입력하면 같은 차트번호 전체 반영 */
     const phoneInput = e.target.closest('input[data-role="phone"]');
     if(phoneInput){
       const id = phoneInput.dataset.id;
@@ -624,9 +763,22 @@ function wireEvents(){
       if(!it) return;
 
       const val = (phoneInput.value ?? "").trim();
-      if(val !== String(it.phone || "").trim()){
-        try{ await updateDoc(doc(db, COL, id), { phone: val }); }
-        catch(err){ console.error(err); alert("핸드폰번호 저장에 실패했습니다."); }
+
+      try{
+        const sameChart = all.filter(
+          x => String(x.chart || "").trim() === String(it.chart || "").trim()
+        );
+
+        const batch = writeBatch(db);
+        sameChart.forEach(row => {
+          const ref = doc(db, COL, row.id);
+          batch.update(ref, { phone: val });
+        });
+
+        await batch.commit();
+      }catch(err){
+        console.error(err);
+        alert("핸드폰번호 저장에 실패했습니다.");
       }
       return;
     }
@@ -668,7 +820,11 @@ onAuthStateChanged(auth, async (user) => {
   if(!user) return;
   ready = true;
 
-  try{ await cleanupOldDocs(); }catch(err){ console.error("cleanup failed:", err); }
+  try{
+    await cleanupOldDocs();
+  }catch(err){
+    console.error("cleanup failed:", err);
+  }
 
   const q = query(collection(db, COL), orderBy("createdAtMs", "desc"));
   onSnapshot(q, (snap) => {
