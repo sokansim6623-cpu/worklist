@@ -163,9 +163,9 @@ function getStateUi(it){
     };
   }
 
-  if(s === "완료"){
+   if(s === "완료"){
     return {
-      nextAct: "",
+      nextAct: "next",
       label: `${finishTime} 완료`,
       className: "done"
     };
@@ -455,13 +455,12 @@ function render(){
             : `
               <div class="stateCell">
                 <button
-                  class="stateChip ${stateUi.className}"
-                  data-act="${stateUi.nextAct}"
-                  data-id="${it.id}"
-                  ${it.status === "완료" ? "disabled" : ""}
-                >
-                  ${stateUi.label}
-                </button>
+  class="stateChip ${stateUi.className}"
+  data-act="${stateUi.nextAct}"
+  data-id="${it.id}"
+>
+  ${stateUi.label}
+</button>
               </div>
             `
         }
@@ -671,31 +670,41 @@ function wireEvents(){
 
     if(showTrash) return;
 
-    if(act === "next"){
-      if(!it.status){
-        await updateDoc(doc(db, COL, id), {
-          status: "대기",
-          visitAt: serverTimestamp()
-        });
-        return;
-      }
+if(act === "next"){
+  if(!it.status){
+    await updateDoc(doc(db, COL, id), {
+      status: "대기",
+      visitAt: serverTimestamp()
+    });
+    return;
+  }
 
-      if(it.status === "대기"){
-        await updateDoc(doc(db, COL, id), {
-          status: "진행중",
-          startAt: serverTimestamp()
-        });
-        return;
-      }
+  if(it.status === "대기"){
+    await updateDoc(doc(db, COL, id), {
+      status: "진행중",
+      startAt: serverTimestamp()
+    });
+    return;
+  }
 
-      if(it.status === "진행중"){
-        await updateDoc(doc(db, COL, id), {
-          status: "완료",
-          finishAt: serverTimestamp()
-        });
-        return;
-      }
-    }
+  if(it.status === "진행중"){
+    await updateDoc(doc(db, COL, id), {
+      status: "완료",
+      finishAt: serverTimestamp()
+    });
+    return;
+  }
+
+  if(it.status === "완료"){
+    await updateDoc(doc(db, COL, id), {
+      status: "",
+      visitAt: null,
+      startAt: null,
+      finishAt: null
+    });
+    return;
+  }
+}
   });
 
   $("list")?.addEventListener("keydown", (e) => {
