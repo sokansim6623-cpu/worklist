@@ -550,20 +550,21 @@ function exportXlsx(){
   const tabName = showTrash ? "휴지통" : (activeCat ? activeCat : "전체");
   const statusName = !activeStatus ? "상태전체" : activeStatus;
 
-  const aoa = [
-    ["핸드폰번호","이름","검사날짜","검사항목","결과","추적검사시기"]
-  ];
+const aoa = [
+  ["차트번호","핸드폰번호","이름","검사날짜","검사항목","결과","추적검사시기"]
+];
 
-  for(const it of rows){
-    aoa.push([
-      it.phone || "",
-      normName(it),
-      it.examDate || "",
-      it.exam || "",
-      it.result || "",
-      it.followUp || ""
-    ]);
-  }
+for (const it of rows) {
+  aoa.push([
+    normChart(it),
+    it.phone || "",
+    normName(it),
+    it.examDate || "",
+    it.exam || "",
+    it.result || "",
+    it.followUp || ""
+  ]);
+}
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   const wb = XLSX.utils.book_new();
