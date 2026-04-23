@@ -123,7 +123,13 @@ function inferCategoryFromExam(exam){
   ];
   const echoSet = ["TTE"];
   const usSet = ["HU","TU","IU(초음파)","IU(심초음파)","BU","기타(초음파)"];
-  const checkSet = ["건강검진","위내시경","대장내시경","기타(검진)"];
+  const checkSet = ["건강검진",
+  "위내시경",
+  "위내시경(자부담)",
+  "대장내시경",
+  "대장내시경(자부담)",
+  "기타(검진)"
+];
 
   if(imageSet.includes(e)) return "영상";
   if(echoSet.includes(e)) return "심장초음파";
@@ -298,6 +304,21 @@ async function addItem(){
   document.querySelectorAll('input[name="category"]').forEach(r => r.checked = false);
 }
 
+function hasBlankSearchableField(it){
+  const fields = [
+    getItemCategoryOrNull(it),
+    it.status,
+    it.result,
+    it.followUp,
+    it.phone,
+    normChart(it),
+    normName(it),
+    it.exam
+  ];
+
+  return fields.some(v => String(v ?? "").trim() === "");
+}
+
 function renderSummary(rowsForDateAll){
   const box = $("summaryBox");
   if(!box) return;
@@ -369,7 +390,9 @@ function renderSummary(rowsForDateAll){
 }
 
 function render(){
-  const qText = (($("q")?.value || "").trim()).toLowerCase();
+  const qRaw = $("q")?.value || "";
+const qText = qRaw.trim().toLowerCase();
+const blankSearch = qRaw.length > 0 && qText === "";
   const selectedDate = $("examDate")?.value || todayStr();
   const list = $("list");
   list.innerHTML = "";
@@ -389,11 +412,23 @@ function render(){
       if(!activeStatus) return true;
       return (it.status || "") === activeStatus;
     })
-    .filter(it => {
-      if(!qText) return true;
-      const hay = `${normName(it)} ${normChart(it)} ${it.exam}`.toLowerCase();
-      return hay.includes(qText);
-    });
+.filter(it => {
+  if(blankSearch) return hasBlankSearchableField(it);
+  if(!qText) return true;
+
+  const hay = `
+    ${normName(it)}
+    ${normChart(it)}
+    ${it.exam || ""}
+    ${getItemCategoryOrNull(it) || ""}
+    ${it.status || ""}
+    ${it.result || ""}
+    ${it.followUp || ""}
+    ${it.phone || ""}
+  `.toLowerCase();
+
+  return hay.includes(qText);
+});
 
   if(filtered.length === 0){
     const tr = document.createElement("tr");
@@ -510,7 +545,9 @@ async function purgeForever(id){
 }
 
 function getFilteredRowsForExport(){
-  const qText = (($("q")?.value || "").trim()).toLowerCase();
+  const qRaw = $("q")?.value || "";
+const qText = qRaw.trim().toLowerCase();
+const blankSearch = qRaw.length > 0 && qText === "";
   const selectedDate = $("examDate")?.value || todayStr();
 
   const rowsForDateAll = all.filter(it => it.examDate === selectedDate);
@@ -526,11 +563,23 @@ function getFilteredRowsForExport(){
       if(!activeStatus) return true;
       return (it.status || "") === activeStatus;
     })
-    .filter(it => {
-      if(!qText) return true;
-      const hay = `${normName(it)} ${normChart(it)} ${it.exam}`.toLowerCase();
-      return hay.includes(qText);
-    });
+   .filter(it => {
+  if(blankSearch) return hasBlankSearchableField(it);
+  if(!qText) return true;
+
+  const hay = `
+    ${normName(it)}
+    ${normChart(it)}
+    ${it.exam || ""}
+    ${getItemCategoryOrNull(it) || ""}
+    ${it.status || ""}
+    ${it.result || ""}
+    ${it.followUp || ""}
+    ${it.phone || ""}
+  `.toLowerCase();
+
+  return hay.includes(qText);
+});
 }
 
 function exportXlsx(){
