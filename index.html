@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>검사 Worklist</title>
 
 <style>
 body {
   font-size:19px;
   text-align:center;
-  font-family:Arial,sans-serif;
+  font-family:Arial, sans-serif;
 }
 
 input, button, select {
@@ -24,8 +24,13 @@ th, td {
   line-height:1.25;
 }
 
-th { background:#f0f0f0; }
-.muted { color:#666; }
+th {
+  background:#f0f0f0;
+}
+
+.muted {
+  color:#666;
+}
 
 .box {
   display:inline-block;
@@ -55,16 +60,23 @@ th { background:#f0f0f0; }
   gap:8px;
 }
 
-.short { width:140px; }
-.search { width:240px; }
+.short {
+  width:140px;
+}
 
-/* ================= 검사 선택 영역 ================= */
+.search {
+  width:240px;
+}
 
-.examWrap { margin-top:10px; }
+/* 검사 선택 영역 */
+
+.examWrap {
+  margin-top:10px;
+}
 
 .examGrid {
   display:grid;
-  grid-template-columns: repeat(4,1fr);
+  grid-template-columns:repeat(4, 1fr);
   gap:10px;
 }
 
@@ -85,7 +97,7 @@ th { background:#f0f0f0; }
 
 .examItems {
   display:grid;
-  grid-template-columns:repeat(2,1fr);
+  grid-template-columns:repeat(2, 1fr);
   gap:8px 12px;
   margin-top:10px;
   font-size:15px;
@@ -97,14 +109,19 @@ label.chk {
   gap:8px;
 }
 
-@media(max-width:900px){
-  .examGrid{grid-template-columns:repeat(2,1fr);}
-  .examItems{grid-template-columns:repeat(2,1fr);}
+@media (max-width:900px) {
+  .examGrid {
+    grid-template-columns:repeat(2, 1fr);
+  }
+
+  .examItems {
+    grid-template-columns:repeat(2, 1fr);
+  }
 }
 
-/* ================= 테이블 ================= */
+/* 테이블 */
 
-.tableWrap{
+.tableWrap {
   width:100%;
   display:flex;
   justify-content:center;
@@ -112,41 +129,67 @@ label.chk {
   overflow-x:auto;
 }
 
-table{
+table {
   border-collapse:collapse;
   table-layout:fixed;
   font-size:18px;
-  width:1560px;
-  min-width:1560px;
+  width:1250px;
+  min-width:1250px;
 }
 
-#summaryBox{ flex:1; }
+#summaryBox {
+  flex:1;
+}
 
 #worklistTable th,
-#worklistTable td{
+#worklistTable td {
   white-space:nowrap;
   word-break:keep-all;
   vertical-align:middle;
 }
 
 /* 컬럼 너비 */
-#worklistTable th:nth-child(1), #worklistTable td:nth-child(1){ width:120px; } /* 분류 */
-#worklistTable th:nth-child(2), #worklistTable td:nth-child(2){ width:110px; } /* 차트번호 */
-#worklistTable th:nth-child(3), #worklistTable td:nth-child(3){ width:110px; } /* 이름 */
-#worklistTable th:nth-child(4), #worklistTable td:nth-child(4){ width:140px; } /* 검사항목 */
-#worklistTable th:nth-child(5), #worklistTable td:nth-child(5){ width:140px; } /* 상태 */
-#worklistTable th:nth-child(6), #worklistTable td:nth-child(6){ width:200px; } /* 검사결과 */
-#worklistTable th:nth-child(7), #worklistTable td:nth-child(7){ width:140px; } /* 추적검사시기 */
-#worklistTable th:nth-child(8), #worklistTable td:nth-child(9){ width:150px; } /* 핸드폰번호 */
-#worklistTable th:nth-child(9), #worklistTable td:nth-child(8){ width:95px; }  /* 관리 */
 
-#worklistTable input[data-role="result"],
+#worklistTable th:nth-child(1),
+#worklistTable td:nth-child(1) {
+  width:150px;
+}
+
+#worklistTable th:nth-child(2),
+#worklistTable td:nth-child(2) {
+  width:140px;
+}
+
+#worklistTable th:nth-child(3),
+#worklistTable td:nth-child(3) {
+  width:140px;
+}
+
+#worklistTable th:nth-child(4),
+#worklistTable td:nth-child(4) {
+  width:180px;
+}
+
+#worklistTable th:nth-child(5),
+#worklistTable td:nth-child(5) {
+  width:160px;
+}
+
+#worklistTable th:nth-child(6),
+#worklistTable td:nth-child(6) {
+  width:200px;
+}
+
+#worklistTable th:nth-child(7),
+#worklistTable td:nth-child(7) {
+  width:100px;
+}
+
 #worklistTable input[data-role="followUp"],
 #worklistTable input[data-role="name"],
-#worklistTable input[data-role="chart"],
-#worklistTable input[data-role="phone"]{
+#worklistTable input[data-role="chart"] {
   width:100%;
-  height:32px;
+  height:38px;
   font-size:17px;
   padding:4px 8px;
   border:1px solid #999;
@@ -155,34 +198,34 @@ table{
   box-sizing:border-box;
 }
 
-#worklistTable td button{
+#worklistTable td button {
   font-size:17px;
   padding:5px 8px;
   margin:0;
 }
 
-#worklistTable td:nth-child(8){
+#worklistTable td:nth-child(7) {
   text-align:center;
   white-space:nowrap;
 }
 
-.manageBtns{
+.manageBtns {
   display:flex;
   justify-content:center;
   align-items:center;
   gap:4px;
 }
 
-#worklistTable td:nth-child(8) button{
-  font-size:12px;
-  padding:4px 5px;
+#worklistTable td:nth-child(7) button {
+  font-size:14px;
+  padding:6px 8px;
   margin:0;
   display:inline-block;
   vertical-align:middle;
-  min-width:38px;
+  min-width:48px;
 }
 
-.categoryBox{
+.categoryBox {
   display:flex;
   align-items:center;
   gap:14px;
@@ -190,22 +233,33 @@ table{
   justify-content:center;
   flex-wrap:wrap;
 }
-.categoryBox .label{ font-weight:700; }
-.categoryBox label{ display:flex; align-items:center; gap:8px; font-size:16px; }
 
-.summaryWrap{
-  max-width:1510px;
+.categoryBox .label {
+  font-weight:700;
+}
+
+.categoryBox label {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:16px;
+}
+
+.summaryWrap {
+  max-width:1250px;
   margin:12px auto 0;
   padding:0 10px;
 }
-.tabBar{
+
+.tabBar {
   display:flex;
   gap:0;
   align-items:flex-end;
   justify-content:flex-start;
   border-bottom:3px solid #111;
 }
-.tabBtn{
+
+.tabBtn {
   appearance:none;
   border:3px solid #111;
   border-bottom:none;
@@ -221,36 +275,52 @@ table{
   min-width:130px;
   text-align:left;
 }
-.tabBtn .sub{
+
+.tabBtn .sub {
   display:block;
   font-size:16px;
   font-weight:500;
   color:#555;
   margin-top:6px;
 }
-.tabBtn.active{
+
+.tabBtn.active {
   background:#f4f4f4;
   position:relative;
   top:3px;
 }
-@media (max-width:900px){
-  .tabBar{ flex-wrap:wrap; }
-  .tabBtn{ min-width:120px; }
+
+@media (max-width:900px) {
+  .tabBar {
+    flex-wrap:wrap;
+  }
+
+  .tabBtn {
+    min-width:120px;
+  }
 }
 
-.listHeader{
-  width:1510px;
+.listHeader {
+  width:1250px;
   margin:12px auto 0;
   display:flex;
   justify-content:space-between;
   align-items:flex-end;
 }
-.summaryWrap{ flex:1; margin:0; padding:0; }
-.excelWrap{ margin-left:20px; }
 
-#statusFilterTh{
+.summaryWrap {
+  flex:1;
+  margin:0;
+  padding:0;
+}
+
+.excelWrap {
+  margin-left:20px;
+}
+
+#statusFilterTh {
   width:100%;
-  height:32px;
+  height:38px;
   font-size:16px;
   padding:4px 8px;
   border:1px solid #999;
@@ -260,15 +330,15 @@ table{
 }
 
 #worklistTable input[data-role="chart"],
-#worklistTable input[data-role="name"]{
+#worklistTable input[data-role="name"] {
   font-weight:600;
 }
 
 #worklistTable select[data-role="category"],
-#worklistTable select[data-role="exam"]{
+#worklistTable select[data-role="exam"] {
   width:100%;
-  height:32px;
-  font-size:14px;
+  height:38px;
+  font-size:16px;
   border:1px solid #999;
   border-radius:8px;
   padding:4px 8px;
@@ -277,22 +347,22 @@ table{
   font-weight:600;
 }
 
-.stateCell{
+.stateCell {
   display:flex;
   justify-content:center;
   align-items:center;
   width:100%;
-  min-height:40px;
+  min-height:44px;
 }
 
-.stateChip{
-  min-width:92px;
-  height:32px;
-  padding:0 10px;
+.stateChip {
+  min-width:110px;
+  height:38px;
+  padding:0 12px;
   border:1px solid #cfcfcf;
   border-radius:999px;
   background:#fff;
-  font-size:14px;
+  font-size:16px;
   font-weight:700;
   display:inline-flex;
   align-items:center;
@@ -303,33 +373,33 @@ table{
   transition:all .15s ease;
 }
 
-.stateChip:hover{
+.stateChip:hover {
   background:#f7f7f7;
 }
 
-.stateChip:disabled{
+.stateChip:disabled {
   opacity:1;
 }
 
-.stateChip.empty{
+.stateChip.empty {
   color:#555;
   border-color:#d6d6d6;
   background:#fafafa;
 }
 
-.stateChip.waiting{
+.stateChip.waiting {
   color:#8a6d00;
   border-color:#e6d28a;
   background:#fff9e8;
 }
 
-.stateChip.running{
+.stateChip.running {
   color:#b42318;
   border-color:#f0b3ad;
   background:#fff1f0;
 }
 
-.stateChip.done{
+.stateChip.done {
   color:#175cd3;
   border-color:#a9c4ff;
   background:#eef4ff;
@@ -366,63 +436,185 @@ table{
 
   <div class="categoryBox">
     <span class="label">분류(선택):</span>
-    <label><input type="radio" name="category" value="영상"> 영상</label>
-    <label><input type="radio" name="category" value="심장초음파"> 심장초음파</label>
-    <label><input type="radio" name="category" value="초음파"> 초음파</label>
-    <label><input type="radio" name="category" value="검진"> 검진</label>
+
+    <label>
+      <input type="radio" name="category" value="영상">
+      영상
+    </label>
+
+    <label>
+      <input type="radio" name="category" value="심장초음파">
+      심장초음파
+    </label>
+
+    <label>
+      <input type="radio" name="category" value="초음파">
+      초음파
+    </label>
+
+    <label>
+      <input type="radio" name="category" value="검진">
+      검진
+    </label>
   </div>
 
   <div class="examWrap">
     <div class="examGrid">
+
       <div class="examGroup">
         <div class="examTitle">CT</div>
+
         <div class="examItems">
-          <label class="chk"><input class="examChk" type="checkbox" value="C-CT">C-CT</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="A-CT">A-CT</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="B-CT">B-CT</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="Cardiac CT">Cardiac CT</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="CECA CT">CECA CT</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="dynamic CT">dynamic CT</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="기타 CT">기타 CT</label>
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="C-CT">
+            C-CT
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="A-CT">
+            A-CT
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="B-CT">
+            B-CT
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="Cardiac CT">
+            Cardiac CT
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="CECA CT">
+            CECA CT
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="dynamic CT">
+            dynamic CT
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="기타 CT">
+            기타 CT
+          </label>
         </div>
       </div>
 
       <div class="examGroup">
         <div class="examTitle">MRI</div>
+
         <div class="examItems">
-          <label class="chk"><input class="examChk" type="checkbox" value="B-MRI">B-MRI</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="B-MRA">B-MRA</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="B-MRI&MRA">B-MRI&MRA</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="복부MRI">복부MRI</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="관절MRI">관절MRI</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="SPINE MRI">SPINE MRI</label>
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="B-MRI">
+            B-MRI
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="B-MRA">
+            B-MRA
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="B-MRI&MRA">
+            B-MRI&amp;MRA
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="복부MRI">
+            복부MRI
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="관절MRI">
+            관절MRI
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="SPINE MRI">
+            SPINE MRI
+          </label>
         </div>
       </div>
 
       <div class="examGroup">
         <div class="examTitle">초음파</div>
+
         <div class="examItems">
-          <label class="chk"><input class="examChk" type="checkbox" value="HU">HU</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="TU">TU</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="IU(초음파)">IU(초음파)</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="IU(심초음파)">IU(심초음파)</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="TTE">TTE</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="BU">BU</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="기타(초음파)">기타</label>
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="HU">
+            HU
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="TU">
+            TU
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="IU(초음파)">
+            IU(초음파)
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="IU(심초음파)">
+            IU(심초음파)
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="TTE">
+            TTE
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="BU">
+            BU
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="기타(초음파)">
+            기타
+          </label>
         </div>
       </div>
 
       <div class="examGroup">
         <div class="examTitle">검진</div>
+
         <div class="examItems">
-          <label class="chk"><input class="examChk" type="checkbox" value="건강검진">건강검진</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="위내시경">위내시경</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="위내시경(자부담)">위내시경(자부담)</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="대장내시경">대장내시경</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="대장내시경(자부담)">대장내시경(자부담)</label>
-          <label class="chk"><input class="examChk" type="checkbox" value="기타(검진)">기타</label>
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="건강검진">
+            건강검진
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="위내시경">
+            위내시경
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="위내시경(자부담)">
+            위내시경(자부담)
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="대장내시경">
+            대장내시경
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="대장내시경(자부담)">
+            대장내시경(자부담)
+          </label>
+
+          <label class="chk">
+            <input class="examChk" type="checkbox" value="기타(검진)">
+            기타
+          </label>
         </div>
       </div>
+
     </div>
   </div>
 </div>
@@ -431,6 +623,7 @@ table{
 
 <div class="listHeader">
   <div id="summaryBox" class="summaryWrap"></div>
+
   <div class="excelWrap">
     <button id="btnExportXlsx">엑셀로 저장</button>
   </div>
@@ -444,6 +637,7 @@ table{
         <th>차트번호</th>
         <th>이름</th>
         <th>검사항목</th>
+
         <th>
           <select id="statusFilterTh" title="상태 필터">
             <option value="">상태(전체)</option>
@@ -452,12 +646,12 @@ table{
             <option value="완료">완료</option>
           </select>
         </th>
-        <th>검사결과</th>
+
         <th>추적검사시기</th>
-        <th>핸드폰번호</th>
         <th>관리</th>
       </tr>
     </thead>
+
     <tbody id="list"></tbody>
   </table>
 </div>
